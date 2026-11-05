@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/scroll_intent.dart';
 import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/custom_height_widget.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
@@ -109,12 +110,15 @@ class _HomePageState extends CommonPageState<HomePage>
         return Obx(
           () {
             final offset = barOffset.value;
-            return CustomHeightWidget(
-              offset: Offset(0, -offset),
-              height: Style.topBarHeight - offset,
-              child: Padding(
-                padding: padding,
-                child: child,
+            return IgnorePointer(
+              ignoring: offset > 0,
+              child: ExcludeSemantics(
+                excluding: offset > 0,
+                child: CustomHeightWidget(
+                  offset: Offset(0, -offset),
+                  height: Style.topBarHeight - offset,
+                  child: Padding(padding: padding, child: child),
+                ),
               ),
             );
           },
@@ -123,15 +127,26 @@ class _HomePageState extends CommonPageState<HomePage>
       if (_homeController.showTopBar case final showTopBar?) {
         return Obx(() {
           final showSearchBar = showTopBar.value;
-          return AnimatedOpacity(
-            opacity: showSearchBar ? 1 : 0,
-            duration: const Duration(milliseconds: 300),
-            child: AnimatedContainer(
-              curve: Curves.easeInOutCubicEmphasized,
-              duration: const Duration(milliseconds: 500),
-              height: showSearchBar ? Style.topBarHeight : 0,
-              padding: padding,
-              child: child,
+          return IgnorePointer(
+            ignoring: !showSearchBar,
+            child: ExcludeSemantics(
+              excluding: !showSearchBar,
+              child: AnimatedOpacity(
+                opacity: showSearchBar ? 1 : 0,
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : ScrollVisibility.duration,
+                curve: ScrollVisibility.curve,
+                child: AnimatedContainer(
+                  curve: ScrollVisibility.curve,
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : ScrollVisibility.duration,
+                  height: showSearchBar ? Style.topBarHeight : 0,
+                  padding: padding,
+                  child: child,
+                ),
+              ),
             ),
           );
         });

@@ -43,6 +43,7 @@ import 'package:PiliPlus/utils/utils.dart';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/gestures.dart' show LongPressGestureRecognizer;
 import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/widgets.dart' as fw show Image;
 import 'package:get/get.dart';
 import 'package:material_ui/material_ui.dart' hide Image;
 import 'package:media_kit/media_kit.dart';
@@ -62,6 +63,7 @@ class GalleryViewer extends StatefulWidget {
     this.initIndex = 0,
     this.onPageChanged,
     this.tag = '',
+    this.indexedHeroTags = false,
   });
 
   final double minScale;
@@ -71,6 +73,7 @@ class GalleryViewer extends StatefulWidget {
   final int initIndex;
   final ValueChanged<int>? onPageChanged;
   final String tag;
+  final bool indexedHeroTags;
 
   @override
   State<GalleryViewer> createState() => _GalleryViewerState();
@@ -81,7 +84,6 @@ class _GalleryViewerState extends State<GalleryViewer>
   late Size _containerSize;
   late final int _quality;
   late final RxInt _currIndex;
-  GlobalKey? _key;
   EdgeInsets? _padding;
 
   late bool _hasInit = false;
@@ -137,11 +139,6 @@ class _GalleryViewerState extends State<GalleryViewer>
     _currIndex = widget.initIndex.obs;
     final item = widget.sources[widget.initIndex];
     _playIfNeeded(item);
-
-    if (!item.isLongPic) {
-      _key = GlobalKey();
-      WidgetsBinding.instance.addPostFrameCallback((_) => _key = null);
-    }
 
     _pageController = PageController(initialPage: widget.initIndex);
 
@@ -420,13 +417,120 @@ class _GalleryViewerState extends State<GalleryViewer>
           }
         };
 
+  Widget _heroFlightShuttleBuilder(
+    BuildContext flightContext,
+    Animation<double> animation,
+    HeroFlightDirection flightDirection,
+    BuildContext fromHeroContext,
+    BuildContext toHeroContext,
+    SourceModel item,
+  ) {
+    final previewImageProvider = item.previewImageProvider;
+    final imageWidth = item.width;
+    final imageHeight = item.height;
+    if (previewImageProvider != null &&
+        imageWidth != null &&
+        imageHeight != null) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest;
+          final boxRatio = size.width / size.height;
+          final imageRatio = imageWidth / imageHeight;
+          final coverSize = imageRatio > boxRatio
+              ? Size(size.height * imageRatio, size.height)
+              : Size(size.width, size.width / imageRatio);
+          final containSize = imageRatio > boxRatio
+              ? Size(size.width, size.width / imageRatio)
+              : Size(size.height * imageRatio, size.height);
+          return AnimatedBuilder(
+            animation: animation,
+            child: fw.Image(
+              image: previewImageProvider,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.low,
+              gaplessPlayback: true,
+            ),
+            builder: (context, child) {
+              final contentSize = Size.lerp(
+                coverSize,
+                containSize,
+                animation.value,
+              )!;
+              return ClipRRect(
+                borderRadius: BorderRadius.lerp(
+                  item.heroBorderRadius ?? BorderRadius.zero,
+                  BorderRadius.zero,
+                  animation.value,
+                )!,
+                child: ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.center,
+                    minWidth: contentSize.width,
+                    maxWidth: contentSize.width,
+                    minHeight: contentSize.height,
+                    maxHeight: contentSize.height,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
+
+    final context = flightDirection == HeroFlightDirection.push
+        ? fromHeroContext
+        : toHeroContext;
+    final size = (context.findRenderObject() as RenderBox).size;
+    return AnimatedBuilder(
+      animation: animation,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: (context.widget as Hero).child,
+        ),
+      ),
+      builder: (context, child) => ClipRRect(
+        borderRadius: BorderRadius.lerp(
+          item.heroBorderRadius ?? BorderRadius.zero,
+          BorderRadius.zero,
+          animation.value,
+        )!,
+        child: child,
+      ),
+    );
+  }
+
+  Widget _legacyHeroFlightShuttleBuilder(
+    BuildContext flightContext,
+    Animation<double> animation,
+    HeroFlightDirection flightDirection,
+    BuildContext fromHeroContext,
+    BuildContext toHeroContext,
+  ) {
+    final context = flightDirection == HeroFlightDirection.push
+        ? fromHeroContext
+        : toHeroContext;
+    final size = (context.findRenderObject() as RenderBox).size;
+    return FittedBox(
+      fit: BoxFit.fill,
+      child: SizedBox(
+        width: size.width,
+        height: size.height,
+        child: (context.widget as Hero).child,
+      ),
+    );
+  }
+
   Widget _itemBuilder(BuildContext context, int index) {
     final item = widget.sources[index];
     final Widget child;
     switch (item.sourceType) {
       case SourceType.fileImage:
         child = Image.file(
-          key: _key,
           File(item.url),
           filterQuality: .low,
           minScale: widget.minScale,
@@ -442,7 +546,6 @@ class _GalleryViewerState extends State<GalleryViewer>
       case SourceType.networkImage:
         final isLongPic = item.isLongPic;
         child = Image(
-          key: _key,
           image: CachedNetworkImageProvider(_getActualUrl(item.url)),
           minScale: widget.minScale,
           maxScale: widget.maxScale,
@@ -454,41 +557,35 @@ class _GalleryViewerState extends State<GalleryViewer>
             if (wasSynchronouslyLoaded) {
               return child;
             }
-            if (frame == null) {
-              if (widget.quality == _quality) {
-                return child;
-              } else {
-                return Image(
-                  image: ResizeImage.resizeIfNeeded(
-                    _containerSize.width.cacheSize(context),
-                    null,
-                    CachedNetworkImageProvider(
-                      ImageUtils.thumbnailUrl(item.url, widget.quality),
-                    ),
-                  ),
-                  minScale: widget.minScale,
-                  maxScale: widget.maxScale,
-                  containerSize: _containerSize,
-                  onDragStart: null,
-                  onDragUpdate: null,
-                  onDragEnd: null,
-                  doubleTapGestureRecognizer: _doubleTapGestureRecognizer,
-                  horizontalDragGestureRecognizer:
-                      _horizontalDragGestureRecognizer,
-                  onChangePage: _onChangePage,
-                );
-                // final isLongPic = item.isLongPic;
-                // return CachedNetworkImage(
-                //   fadeInDuration: Duration.zero,
-                //   fadeOutDuration: Duration.zero,
-                //   // fit: isLongPic ? .fitWidth : null,
-                //   // alignment: isLongPic ? .topCenter : .center,
-                //   imageUrl: ImageUtils.thumbnailUrl(item.url, widget.quality),
-                //   placeholder: (_, _) => const SizedBox.expand(),
-                // );
-              }
+            if (widget.quality == _quality &&
+                item.previewImageProvider == null) {
+              return child;
             }
-            return child;
+            final previewProvider =
+                item.previewImageProvider ??
+                ResizeImage.resizeIfNeeded(
+                  _containerSize.width.cacheSize(context),
+                  null,
+                  CachedNetworkImageProvider(
+                    ImageUtils.thumbnailUrl(item.url, widget.quality),
+                  ),
+                );
+            return Stack(
+              fit: .expand,
+              children: [
+                fw.Image(
+                  image: previewProvider,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.low,
+                  gaplessPlayback: true,
+                ),
+                AnimatedOpacity(
+                  opacity: frame == null ? 0 : 1,
+                  duration: const Duration(milliseconds: 160),
+                  child: child,
+                ),
+              ],
+            );
           },
           loadingBuilder: loadingBuilder,
           onDragStart: _onDragStart,
@@ -500,7 +597,6 @@ class _GalleryViewerState extends State<GalleryViewer>
         }
       case SourceType.livePhoto:
         child = Obx(
-          key: _key,
           () => _currIndex.value == index && _videoController != null
               ? Viewer(
                   minScale: widget.minScale,
@@ -524,7 +620,29 @@ class _GalleryViewerState extends State<GalleryViewer>
               : const SizedBox.shrink(),
         );
     }
-    return Hero(tag: '${item.url}${widget.tag}', child: child);
+    if (widget.indexedHeroTags &&
+        item.sourceType == SourceType.networkImage &&
+        item.previewImageProvider == null) {
+      return child;
+    }
+    return Hero(
+      tag: widget.indexedHeroTags
+          ? '${item.url}${widget.tag}$index'
+          : '${item.url}${widget.tag}',
+      flightShuttleBuilder:
+          item.sourceType == SourceType.livePhoto || !widget.indexedHeroTags
+          ? _legacyHeroFlightShuttleBuilder
+          : (context, animation, direction, from, to) =>
+                _heroFlightShuttleBuilder(
+                  context,
+                  animation,
+                  direction,
+                  from,
+                  to,
+                  item,
+                ),
+      child: child,
+    );
   }
 
   static const Duration _kTapDiff = Duration(milliseconds: 300);

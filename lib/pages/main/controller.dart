@@ -14,10 +14,7 @@ import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/mine/view.dart';
 import 'package:PiliPlus/services/account_service.dart';
 import 'package:PiliPlus/utils/extension/get_ext.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/update.dart';
 import 'package:collection/collection.dart';
@@ -39,6 +36,19 @@ class MainController extends GetxController
   bool useBottomNav = false;
   late dynamic controller;
   final RxInt selectedIndex = 0.obs;
+  Future<bool> Function()? mallGoBack;
+  final bottomNavHeight = 0.0.obs;
+
+  Future<void> onMallBack() async {
+    if (await mallGoBack?.call() == true) return;
+    final firstPage = navigationBars.indexWhere((page) => page != .mall);
+    if (firstPage != -1) {
+      setIndex(firstPage);
+      barOffset?.value = 0.0;
+      showBottomBar?.value = true;
+      setSearchBar();
+    }
+  }
 
   final RxInt dynCount = 0.obs;
   late DynamicBadgeMode dynamicBadgeMode;
@@ -58,7 +68,7 @@ class MainController extends GetxController
   late int lastCheckUnreadAt = 0;
 
   final enableMYBar = Pref.enableMYBar;
-  final floatingNavBar = Pref.floatingNavBar;
+  late final floatingNavBar = Pref.floatingNavBar;
   final useSideBar = Pref.useSideBar;
   final hideSideBarLabel = Pref.hideSideBarLabel;
   final mainTabBarView = Pref.mainTabBarView;
@@ -225,17 +235,7 @@ class MainController extends GetxController
   }
 
   void setNavBarConfig() {
-    List<int>? navBarSort =
-        (GStorage.setting.get(SettingBoxKey.navBarSort) as List?)?.fromCast();
-    late final List<NavigationBarType> navigationBars;
-    if (navBarSort == null || navBarSort.isEmpty) {
-      navigationBars = NavigationBarType.values;
-    } else {
-      navigationBars = navBarSort
-          .map(NavigationBarType.values.elementAt)
-          .toList();
-    }
-    this.navigationBars = navigationBars;
+    navigationBars = NavigationBarType.defaultOrder;
     final defPage = Pref.defaultHomePage;
     selectedIndex.value = math.max(0, navigationBars.indexOf(defPage));
   }
@@ -292,6 +292,9 @@ class MainController extends GetxController
     feedBack();
 
     final currentNav = navigationBars[value];
+    if (currentNav == NavigationBarType.mall || value != selectedIndex.value) {
+      restoreBars();
+    }
     if (value != selectedIndex.value) {
       selectedIndex.value = value;
       if (mainTabBarView) {
@@ -314,7 +317,7 @@ class MainController extends GetxController
           () => switch (currentNav) {
             .home => homeController.onRefresh(),
             .dynamics => dynamicController.onRefresh(),
-            .mine => null,
+            .mine || .mall => null,
           },
         );
       } else {
@@ -326,6 +329,12 @@ class MainController extends GetxController
       }
       _lastSelectTime = now;
     }
+  }
+
+  void restoreBars() {
+    barOffset?.value = 0;
+    showBottomBar?.value = true;
+    setSearchBar();
   }
 
   void setSearchBar() {

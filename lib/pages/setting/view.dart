@@ -157,6 +157,7 @@ class _SettingPageState extends State<SettingPage> {
           .about => const AboutPage(),
           _ => CommonSetting(settingType: type),
         },
+        routeName: '/setting/${type.name}',
       );
     } else {
       _type = type;

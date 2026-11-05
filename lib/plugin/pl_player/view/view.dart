@@ -25,13 +25,13 @@ import 'package:PiliPlus/models/common/super_resolution_type.dart';
 import 'package:PiliPlus/models/common/video/base_quality.dart';
 import 'package:PiliPlus/models/video/play/url.dart';
 import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
-import 'package:PiliPlus/models_new/video/video_detail/ugc_season.dart';
 import 'package:PiliPlus/pages/common/common_intro_controller.dart';
 import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
 import 'package:PiliPlus/pages/live_room/widgets/bottom_control.dart'
     as live_bottom;
 import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
+import 'package:PiliPlus/pages/video/introduction/ugc/controller.dart';
 import 'package:PiliPlus/pages/video/post_panel/popup_menu_text.dart';
 import 'package:PiliPlus/pages/video/post_panel/view.dart';
 import 'package:PiliPlus/pages/video/widgets/header_control.dart';
@@ -57,7 +57,6 @@ import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/ios/pip_helper.dart';
 import 'package:PiliPlus/utils/mobile_observer.dart';
@@ -90,6 +89,7 @@ class PLVideoPlayer extends StatefulWidget {
   const PLVideoPlayer({
     required this.maxWidth,
     required this.maxHeight,
+    this.videoHeight,
     required this.plPlayerController,
     this.videoDetailController,
     this.introController,
@@ -105,21 +105,14 @@ class PLVideoPlayer extends StatefulWidget {
 
   final double maxWidth;
   final double maxHeight;
+  final double? videoHeight;
   final PlPlayerController plPlayerController;
   final VideoDetailController? videoDetailController;
   final CommonIntroController? introController;
   final Widget headerControl;
   final Widget? bottomControl;
   final Widget? danmuWidget;
-  final void Function([
-    int?,
-    UgcSeason?,
-    List<ugc.BaseEpisodeItem>?,
-    String?,
-    int?,
-    int?,
-  ])?
-  showEpisodes;
+  final ugc.ShowEpisodes? showEpisodes;
   final VoidCallback? showViewPoints;
   final Color fill;
   final Alignment alignment;
@@ -133,8 +126,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   late AnimationController _animationController;
   late VideoController videoController;
   late final CommonIntroController introController = widget.introController!;
-  late final VideoDetailController videoDetailController =
-      widget.videoDetailController!;
+  PgcIntroController get pgcController => introController as PgcIntroController;
+  UgcIntroController get ugcController => introController as UgcIntroController;
+  late final videoDetailController = widget.videoDetailController!;
 
   final _playerKey = GlobalKey();
   final _videoKey = GlobalKey();
@@ -145,7 +139,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
   late FullScreenMode mode;
 
-  late final RxBool showRestoreScaleBtn = false.obs;
+  late final RxBool _localShowRestoreScaleBtn = false.obs;
+  RxBool get showRestoreScaleBtn =>
+      widget.videoDetailController?.showRestoreScaleBtn ??
+      _localShowRestoreScaleBtn;
 
   GestureType? _gestureType;
   Offset? _initialFocalPoint;
@@ -266,7 +263,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       _onControlChanged,
     );
 
-    _transformationController = TransformationController();
+    _localTransformationController = TransformationController();
 
     _animationController = AnimationController(
       vsync: this,
@@ -308,14 +305,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
     if (plPlayerController.enableTapDm) {
       _tapGestureRecognizer = ImmediateTapGestureRecognizer(
-        onTapDown: plPlayerController.enableShowDanmaku.value
+        onTapDown: plPlayerController.enableShowDanmakuAdaptive.value
             ? _onTapDown
             : null,
         onTapUp: _onTapUp,
         onTapCancel: _removeDmAction,
       );
 
-      _danmakuListener = plPlayerController.enableShowDanmaku.listen((value) {
+      _danmakuListener = plPlayerController.enableShowDanmakuAdaptive.listen((
+        value,
+      ) {
         if (!value) _removeDmAction();
         _tapGestureRecognizer.onTapDown = value ? _onTapDown : null;
       });
@@ -393,7 +392,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _resetSubPaddingIfNeeded();
     _controlsListener?.cancel();
     _animationController.dispose();
-    _transformationController.dispose();
+    _localTransformationController.dispose();
     _removeDmAction();
     if (PlatformUtils.isMobile) {
       FlutterVolumeController.removeListener();
@@ -580,26 +579,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           }
           // part -> playAll -> season(pgc)
           if (isPlayAll && !isPart) {
-            widget.showEpisodes?.call();
+            widget.showEpisodes?.call(type: null);
             return;
           }
-          final bvid = plPlayerController.bvid;
-          List<ugc.BaseEpisodeItem>? episodes;
-          if (isPart) {
-            episodes = videoDetail.pages!;
-          } else if (isPgc) {
-            episodes =
-                (introController as PgcIntroController).pgcItem.episodes!;
-          }
           widget.showEpisodes?.call(
-            isSeason ? videoDetailController.seasonIndex.value : null,
-            isSeason ? videoDetail.ugcSeason! : null,
-            isSeason ? null : episodes,
-            bvid,
-            IdUtils.bv2av(bvid),
-            isSeason
-                ? videoDetailController.seasonCid
-                : plPlayerController.cid!,
+            type: isSeason
+                ? .season
+                : isPgc
+                ? .pgc
+                : .part,
           );
         },
       ),
@@ -914,7 +902,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
   bool get isFullScreen => plPlayerController.isFullScreen.value;
 
-  late final TransformationController _transformationController;
+  late final TransformationController _localTransformationController;
+  TransformationController get _transformationController =>
+      widget.videoDetailController?.videoTransformController ??
+      _localTransformationController;
 
   late ColorScheme colorScheme;
   late double maxWidth;
@@ -1338,7 +1329,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   @override
   Widget build(BuildContext context) {
     maxWidth = widget.maxWidth;
-    maxHeight = widget.maxHeight;
+    maxHeight = widget.videoHeight ?? widget.maxHeight;
     final isFullScreen = this.isFullScreen;
     final primary = isFullScreen && colorScheme.isLight
         ? colorScheme.inversePrimary
@@ -1378,7 +1369,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         if (plPlayerController.enableTapDm)
           Obx(
             () {
-              if (!plPlayerController.enableShowDanmaku.value) {
+              if (!plPlayerController.enableShowDanmakuAdaptive.value) {
                 return const SizedBox.shrink();
               }
               final dmOffset = _dmOffset.value;
@@ -1586,45 +1577,44 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         Positioned.fill(
           top: -1,
           bottom: -1,
-          child: ClipRect(
-            child: RepaintBoundary(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  AppBarAni(
-                    isTop: true,
-                    controller: _animationController,
-                    isFullScreen: isFullScreen,
-                    removeSafeArea: plPlayerController.removeSafeArea,
-                    child: plPlayerController.isDesktopPip
-                        ? GestureDetector(
-                            behavior: HitTestBehavior.translucent,
-                            onPanStart: (_) => WindowController.instance.window
-                                ?.startDragging(),
-                            child: widget.headerControl,
-                          )
-                        : widget.headerControl,
-                  ),
-                  AppBarAni(
-                    isTop: false,
-                    controller: _animationController,
-                    isFullScreen: isFullScreen,
-                    removeSafeArea: plPlayerController.removeSafeArea,
-                    child:
-                        widget.bottomControl ??
-                        BottomControl(
-                          maxWidth: maxWidth,
-                          isFullScreen: isFullScreen,
-                          controller: plPlayerController,
-                          videoDetailController: videoDetailController,
-                          buildBottomControl: () => buildBottomControl(
-                            videoDetailController,
-                            maxWidth > maxHeight,
-                          ),
+          child: RepaintBoundary(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                AppBarAni(
+                  isTop: true,
+                  controller: _animationController,
+                  isFullScreen: isFullScreen,
+                  removeSafeArea: plPlayerController.removeSafeArea,
+                  child: plPlayerController.isDesktopPip
+                      ? GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onPanStart: (_) =>
+                              WindowController.instance.window?.startDragging(),
+                          child: widget.headerControl,
+                        )
+                      : widget.headerControl,
+                ),
+                AppBarAni(
+                  isTop: false,
+                  safeBottom: widget.videoHeight != null,
+                  controller: _animationController,
+                  isFullScreen: isFullScreen,
+                  removeSafeArea: plPlayerController.removeSafeArea,
+                  child:
+                      widget.bottomControl ??
+                      BottomControl(
+                        maxWidth: maxWidth,
+                        isFullScreen: isFullScreen,
+                        controller: plPlayerController,
+                        videoDetailController: videoDetailController,
+                        buildBottomControl: () => buildBottomControl(
+                          videoDetailController,
+                          maxWidth > maxHeight,
                         ),
-                  ),
-                ],
-              ),
+                      ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1825,8 +1815,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                                     size: 15,
                                     color: Colors.white,
                                   ),
-                            onTap: () =>
-                                plPlayerController.onLockControl(!controlsLock),
+                            onTap: () => plPlayerController.onLockControl(
+                              !controlsLock,
+                            ),
                           );
                         }),
                       ),
@@ -2009,7 +2000,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     return Container(
       clipBehavior: .none,
       width: maxWidth,
-      height: maxHeight,
+      height: widget.maxHeight,
       color: widget.fill,
       child: Obx(
         () => MouseInteractiveViewer(
@@ -2038,23 +2029,28 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           childKey: _videoKey,
           child: RepaintBoundary(
             key: _videoKey,
-            child: Obx(
-              () {
-                final videoFit = plPlayerController.videoFit.value;
-                return Transform.flip(
-                  flipX: plPlayerController.flipX.value,
-                  flipY: plPlayerController.flipY.value,
-                  child: FittedBox(
-                    fit: videoFit.boxFit,
-                    alignment: widget.alignment,
-                    child: SimpleVideo(
-                      controller: plPlayerController.videoController!,
-                      fill: widget.fill,
-                      aspectRatio: videoFit.aspectRatio,
-                    ),
-                  ),
-                );
-              },
+            child: Center(
+              child: SizedBox(
+                height: maxHeight,
+                child: Obx(
+                  () {
+                    final videoFit = plPlayerController.videoFit.value;
+                    return Transform.flip(
+                      flipX: plPlayerController.flipX.value,
+                      flipY: plPlayerController.flipY.value,
+                      child: FittedBox(
+                        fit: videoFit.boxFit,
+                        alignment: widget.alignment,
+                        child: SimpleVideo(
+                          controller: plPlayerController.videoController!,
+                          fill: widget.fill,
+                          aspectRatio: videoFit.aspectRatio,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),

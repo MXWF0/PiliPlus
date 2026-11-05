@@ -88,8 +88,8 @@ class _BubblePageState extends State<BubblePage>
                 (e) => e.sortType == sortInfo.curSortType,
               );
               if (item != null) {
-                return FloatingActionButton.extended(
-                  tooltip: '排序',
+                return FloatingActionButton(
+                  tooltip: '排序：${item.text!}',
                   onPressed: () => showDialog(
                     context: context,
                     builder: (context) => SimpleDialog(
@@ -119,8 +119,7 @@ class _BubblePageState extends State<BubblePage>
                       ).toList(),
                     ),
                   ),
-                  icon: const Icon(Icons.sort, size: 20),
-                  label: Text(item.text!),
+                  child: const Icon(Icons.sort, size: 20),
                 );
               }
               return const SizedBox.shrink();

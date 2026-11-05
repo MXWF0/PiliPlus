@@ -4,6 +4,9 @@ import 'dart:io' show Platform;
 import 'dart:math' show max, min;
 import 'dart:ui' as ui;
 
+// ignore: implementation_imports
+import 'package:media_kit_video/src/video_controller/android_video_controller/android_video_controller.dart';
+
 import 'package:PiliPlus/common/assets.dart';
 import 'package:PiliPlus/http/browser_ua.dart';
 import 'package:PiliPlus/http/constants.dart';
@@ -53,7 +56,7 @@ import 'package:PiliPlus/utils/utils.dart';
 import 'package:archive/archive.dart' show getCrc32;
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:easy_debounce/easy_throttle.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, visibleForTesting;
 import 'package:flutter/services.dart'
     show DeviceOrientation, HapticFeedback, KeyDownEvent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -107,7 +110,8 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   int _playerCount = 0;
 
-  late double lastPlaybackSpeed = 1.0;
+  double lastPlaybackSpeed = Pref.playSpeedDefault;
+  int _speedRequest = 0;
   final RxDouble _playbackSpeed = Pref.playSpeedDefault.obs;
   late final RxDouble _longPressSpeed = Pref.longPressSpeedDefault.obs;
 
@@ -445,8 +449,9 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   late final enableSlideFS = Pref.enableSlideFS;
   late final enableScrollVolume = Pref.enableScrollVolume;
   late final enableDragSubtitle = Pref.enableDragSubtitle;
+  late final fastForBackwardInSeconds = Pref.fastForBackwardDuration;
   late final fastForBackwardDuration = Duration(
-    seconds: Pref.fastForBackwardDuration,
+    seconds: fastForBackwardInSeconds,
   );
 
   late final horizontalSeasonPanel = Pref.horizontalSeasonPanel;
@@ -613,6 +618,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   void _onOrientationChanged(OrientationParams param) {
     _orientation = param.orientation;
     if (Platform.isIOS && !visible) return;
+    if (controlsLock.value) return;
     final orientation = param.orientation;
     final isFullScreen = this.isFullScreen.value;
     if (checkIsAutoRotate &&
@@ -625,7 +631,6 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     }
     switch (orientation) {
       case .portraitUp:
-        if (!_isVertical && controlsLock.value) return;
         if (!horizontalScreen && !_isVertical && isFullScreen) {
           if (!isManualFS) {
             triggerFullScreen(status: false, orientation: orientation);
@@ -635,7 +640,6 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
         }
       case .portraitDown:
         if (!horizontalScreen) return;
-        if (!_isVertical && controlsLock.value) return;
         portraitDownMode();
       case .landscapeLeft:
         if (!horizontalScreen && !isFullScreen) {
@@ -652,9 +656,16 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     }
   }
 
+  @visibleForTesting
+  PlPlayerController.forTesting({
+    Stream<OrientationParams>? orientationChanges,
+  }) {
+    _orientationListener = orientationChanges?.listen(_onOrientationChanged);
+  }
+
   // 添加一个私有构造函数
   PlPlayerController._() {
-    if (PlatformUtils.isMobile) {
+    if (PlatformUtils.isMobile && !DeviceUtils.isChromeOS) {
       _orientationListener = NativeDeviceOrientationPlatform.instance
           .onOrientationChanged(
             checkIsAutoRotate: checkIsAutoRotate,
@@ -725,6 +736,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     VoidCallback? onInit,
     Volume? volume,
     bool autoFullScreenFlag = false,
+    bool freshVideoOutput = false,
     int? rotate,
   }) async {
     try {
@@ -759,6 +771,10 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
         return;
       }
       // 配置Player 音轨、字幕等等
+      if (_videoController case final AndroidVideoController output
+          when freshVideoOutput) {
+        output.prepareForNextMedia();
+      }
       await _createVideoController(dataSource, seekTo, volume, rotate);
 
       if (_playerCount == 0) {
@@ -887,7 +903,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     return player;
   }
 
-  late final buffer = Pref.initBuffer(_playbackSpeed.value);
+  Map<String, String> get buffer => Pref.initBuffer(lastPlaybackSpeed);
   late final liveBuffer = Pref.initLiveBuffer();
 
   // 配置播放器
@@ -974,7 +990,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     if (_instance == null) return;
     // 设置倍速
     if (_videoPlayerController != null) {
-      final speed = isLive ? 1.0 : playbackSpeed;
+      final speed = isLive ? 1.0 : lastPlaybackSpeed;
       if (_videoPlayerController!.state.rate != speed) {
         await setPlaybackSpeed(speed);
       }
@@ -1223,23 +1239,34 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
   }
 
   /// 设置倍速
-  Future<void> setPlaybackSpeed(double speed) async {
-    lastPlaybackSpeed = playbackSpeed;
-
-    if (speed == _videoPlayerController?.state.rate) return;
-
-    await _videoPlayerController?.setRate(speed);
+  Future<void> setPlaybackSpeed(double speed, {bool temporary = false}) async {
+    if (!temporary) lastPlaybackSpeed = speed;
+    final player = videoPlayerController;
+    final request = ++_speedRequest;
+    if (player != null && !isLive && !isFileSource) {
+      // Keep the configured wall-clock prefetch window at higher rates.
+      // Leave the user's byte limits and the live/local-file cache unchanged.
+      final options = Pref.initBuffer(speed);
+      for (final name in ['cache-secs', 'demuxer-hysteresis-secs']) {
+        await player.command(['set', name, options[name]!]);
+        if (request != _speedRequest || player != videoPlayerController) {
+          return;
+        }
+      }
+    }
+    // Queue the latest rate even if state still shows it: an older update may
+    // be waiting behind a native seek/open operation.
+    await player?.setRate(speed);
+    if (request != _speedRequest || player != videoPlayerController) return;
     if (!isLive) _playbackSpeed.value = speed;
     _updatePlaybackState();
-    if (danmakuController != null) {
-      try {
-        danmakuController?.updateOption(
-          danmakuController!.option.copyWith(
-            duration: DanmakuOptions.danmakuDuration / speed,
-            staticDuration: DanmakuOptions.danmakuStaticDuration / speed,
-          ),
-        );
-      } catch (_) {}
+    if (danmakuController case final danmaku?) {
+      danmaku.updateOption(
+        danmaku.option.copyWith(
+          duration: DanmakuOptions.danmakuDuration / speed,
+          staticDuration: DanmakuOptions.danmakuStaticDuration / speed,
+        ),
+      );
     }
   }
 
@@ -1385,13 +1412,14 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
         longPressStatus.value = val;
         HapticFeedback.lightImpact();
         await setPlaybackSpeed(
-          enableAutoLongPressSpeed ? playbackSpeed * 2 : longPressSpeed,
+          enableAutoLongPressSpeed ? lastPlaybackSpeed * 2 : longPressSpeed,
+          temporary: true,
         );
       }
     } else {
       // if (kDebugMode) debugPrint('$playbackSpeed');
       longPressStatus.value = val;
-      await setPlaybackSpeed(lastPlaybackSpeed);
+      await setPlaybackSpeed(lastPlaybackSpeed, temporary: true);
     }
   }
 
@@ -1426,6 +1454,20 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
 
   void onBackward(Duration duration) {
     onForwardBackward(videoPlayerController!.state.position - duration);
+  }
+
+  void multiBackwardStart([_]) {
+    isSeeking.value = true;
+    seekPosition.value = max(0, seekPosition.value - fastForBackwardInSeconds);
+  }
+
+  void multiBackwardEnd() {
+    if (isSeeking.value) {
+      isSeeking.value = false;
+      onForwardBackward(Duration(seconds: seekPosition.value));
+    } else {
+      onBackward(fastForBackwardDuration);
+    }
   }
 
   void onForwardBackward(Duration duration) {
@@ -1749,10 +1791,13 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     }
     if (videoShot case Success(:final response)) {
       showPreview.value = true;
-      previewIndex.value = max(
+      final index = max(
         0,
         (response.index.where((item) => item <= seconds).length - 2),
       );
+      if (previewIndex.value != index) {
+        previewIndex.value = index;
+      }
     }
   }
 

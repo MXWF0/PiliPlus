@@ -386,6 +386,7 @@ class _VideoTime extends LeafRenderObjectWidget {
 
   @override
   _RenderVideoTime createRenderObject(BuildContext context) => _RenderVideoTime(
+    fontSize: MediaQuery.textScalerOf(context).scale(10),
     position: position,
     duration: duration,
   );
@@ -396,6 +397,7 @@ class _VideoTime extends LeafRenderObjectWidget {
     covariant _RenderVideoTime renderObject,
   ) {
     renderObject
+      ..fontSize = MediaQuery.textScalerOf(context).scale(10)
       ..position = position
       ..duration = duration;
   }
@@ -403,15 +405,29 @@ class _VideoTime extends LeafRenderObjectWidget {
 
 class _RenderVideoTime extends RenderBox {
   _RenderVideoTime({
+    required this._fontSize,
     required this._position,
     required this._duration,
   });
+
+  double _fontSize;
+  set fontSize(double value) {
+    if (_fontSize == value) return;
+    _fontSize = value;
+    _cache?.dispose();
+    _cache = null;
+    markNeedsLayout();
+  }
 
   String _duration;
   set duration(String value) {
     if (_duration == value) return;
     _duration = value;
-    final paragraph = _buildParagraph(const Color(0xFFD0D0D0), _duration);
+    final paragraph = _buildParagraph(
+      const Color(0xFFD0D0D0),
+      _duration,
+      _fontSize,
+    );
     if (paragraph.maxIntrinsicWidth != _cache?.maxIntrinsicWidth) {
       markNeedsLayout();
     } else {
@@ -430,11 +446,15 @@ class _RenderVideoTime extends RenderBox {
 
   ui.Paragraph? _cache;
 
-  static ui.Paragraph _buildParagraph(Color color, String time) {
+  static ui.Paragraph _buildParagraph(
+    Color color,
+    String time,
+    double fontSize,
+  ) {
     final builder =
         ui.ParagraphBuilder(
             ui.ParagraphStyle(
-              fontSize: 10,
+              fontSize: fontSize,
               height: 1.4,
               fontFamily: 'Monospace',
             ),
@@ -442,7 +462,7 @@ class _RenderVideoTime extends RenderBox {
           ..pushStyle(
             ui.TextStyle(
               color: color,
-              fontSize: 10,
+              fontSize: fontSize,
               height: 1.4,
               fontFamily: 'Monospace',
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -458,6 +478,7 @@ class _RenderVideoTime extends RenderBox {
     final paragraph = _cache ??= _buildParagraph(
       const Color(0xFFD0D0D0),
       _duration,
+      _fontSize,
     );
     return Size(paragraph.maxIntrinsicWidth, paragraph.height * 2);
   }
@@ -477,7 +498,7 @@ class _RenderVideoTime extends RenderBox {
 
   @override
   void paint(PaintingContext context, ui.Offset offset) {
-    final para = _buildParagraph(Colors.white, _position);
+    final para = _buildParagraph(Colors.white, _position, _fontSize);
     context.canvas
       ..drawParagraph(
         para,

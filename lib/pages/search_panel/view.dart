@@ -1,5 +1,5 @@
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
-import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
+import 'package:PiliPlus/common/widgets/loading_widget/list_body.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/search/search_type.dart';
 import 'package:PiliPlus/models/search/result.dart';
@@ -70,17 +70,14 @@ abstract class CommonSearchPanelState<
   Widget get buildLoading;
 
   Widget _buildBody(LoadingState<List<T>?> loadingState) {
-    return switch (loadingState) {
-      Loading() => buildLoading,
-      Success(:final response) =>
-        response != null && response.isNotEmpty
-            ? buildList(response)
-            : HttpError(onReload: controller.onReload),
-      Error(:final errMsg) => HttpError(
-        errMsg: errMsg,
-        onReload: controller.onReload,
-      ),
-    };
+    return SliverListBody(
+      controller: controller,
+      state: loadingState,
+      loading: buildLoading,
+      emptyIcon: Icons.search_off,
+      emptyMessage: '无搜索结果，试试其他关键词',
+      builder: buildList,
+    );
   }
 
   Widget? buildHeader() => null;

@@ -36,10 +36,10 @@ class WebviewPage extends StatefulWidget {
   final String? url;
 
   @override
-  State<WebviewPage> createState() => _WebviewPageState();
+  State<WebviewPage> createState() => WebviewPageState();
 }
 
-class _WebviewPageState extends State<WebviewPage> with RouteAware {
+class WebviewPageState extends State<WebviewPage> with RouteAware {
   late String _currentUrl;
   late final String userAgent;
   late final RxString _title;
@@ -81,6 +81,14 @@ class _WebviewPageState extends State<WebviewPage> with RouteAware {
   }
 
   bool _isPop = false;
+  Future<bool> goBack() async {
+    if (await _webViewController?.canGoBack() == true) {
+      await _webViewController!.goBack();
+      return true;
+    }
+    return false;
+  }
+
   @override
   void didPop() {
     setState(() {
@@ -406,7 +414,9 @@ document.addEventListener('click', function(e) {
                   clearCache: true,
                   javaScriptEnabled: true,
                   forceDark: ForceDark.AUTO,
-                  useHybridComposition: true,
+                  // Keep live web content in Flutter's layer tree for page
+                  // transforms and clipped material blur, including full pages.
+                  useHybridComposition: false,
                   algorithmicDarkeningAllowed: true,
                   useShouldOverrideUrlLoading: true,
                   userAgent: userAgent,

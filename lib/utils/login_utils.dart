@@ -1,4 +1,4 @@
-import 'dart:async' show FutureOr;
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:PiliPlus/http/loading_state.dart';
@@ -19,34 +19,70 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 abstract final class LoginUtils {
-  static FutureOr setWebCookie([Account? account]) {
-    if (Platform.isLinux) return null;
+  static Future<void> _webCookieTurn = Future.value();
+  static int _mainSessionRequest = 0;
+
+  static Future<void> setWebCookie([Account? account]) async {
+    if (Platform.isLinux) return;
     final cookies = (account ?? Accounts.main).cookieJar.toList();
-    final webManager = web.CookieManager.instance(
-      webViewEnvironment: webViewEnvironment,
-    );
-    return Future.wait(
-      cookies.map(
-        (cookie) => webManager.setCookie(
-          url: web.WebUri(
-            '${Platform.isWindows ? 'https://' : ''}${cookie.domain}',
+    final previous = _webCookieTurn;
+    final released = Completer<void>();
+    _webCookieTurn = released.future;
+    await previous;
+    try {
+      final webManager = web.CookieManager.instance(
+        webViewEnvironment: webViewEnvironment,
+      );
+      await webManager.deleteCookies(
+        url: web.WebUri('https://bilibili.com'),
+        domain: '.bilibili.com',
+      );
+      for (final host in [
+        'bilibili.com',
+        'mall.bilibili.com',
+        'passport.bilibili.com',
+        'show.bilibili.com',
+      ]) {
+        await webManager.deleteCookies(url: web.WebUri('https://$host'));
+      }
+      final written = await Future.wait(
+        cookies.map(
+          (cookie) => webManager.setCookie(
+            url: web.WebUri('https://bilibili.com'),
+            name: cookie.name,
+            value: cookie.value,
+            path: cookie.path ?? '/',
+            domain: '.bilibili.com',
+            isSecure: cookie.secure,
+            isHttpOnly: cookie.httpOnly,
           ),
-          name: cookie.name,
-          value: cookie.value,
-          path: cookie.path ?? '/',
-          domain: cookie.domain,
-          isSecure: cookie.secure,
-          isHttpOnly: cookie.httpOnly,
         ),
-      ),
-    );
+      );
+      if (written.contains(false)) {
+        throw StateError('无法同步 B 站网页 Cookie');
+      }
+    } finally {
+      released.complete();
+    }
   }
 
-  static Future<void> onLoginMain() async {
+  static Future<void> onLoginMain() {
+    final ready = _onLoginMain(++_mainSessionRequest);
+    Get.find<AccountService>().webSession.value = ready;
+    return ready;
+  }
+
+  static Future<void> _onLoginMain(int request) async {
     final account = Accounts.main;
+    await setWebCookie(account);
+    if (request != _mainSessionRequest || !identical(account, Accounts.main)) {
+      return;
+    }
     final res = await UserHttp.userInfo();
+    if (request != _mainSessionRequest || !identical(account, Accounts.main)) {
+      return;
+    }
     if (res case Success(:final response)) {
-      setWebCookie(account);
       RequestUtils.syncHistoryStatus();
       if (response.isLogin == true) {
         final accountService = Get.find<AccountService>()
@@ -79,19 +115,23 @@ abstract final class LoginUtils {
   }
 
   static Future<void> onLogoutMain() {
-    Get.find<AccountService>()
-      ..face.value = ''
-      ..isLogin.value = false;
+    final ready = _onLogoutMain(++_mainSessionRequest);
+    Get.find<AccountService>().webSession.value = ready;
+    return ready;
+  }
 
-    return Future.wait([
+  static Future<void> _onLogoutMain(int request) async {
+    await Future.wait([
       if (Platform.isLinux)
         LinuxCookieManager.deleteAllCookies()
       else
-        web.CookieManager.instance(
-          webViewEnvironment: webViewEnvironment,
-        ).deleteAllCookies(),
+        setWebCookie(AnonymousAccount()),
       GStorage.userInfo.delete('userInfoCache'),
     ]);
+    if (request != _mainSessionRequest) return;
+    Get.find<AccountService>()
+      ..face.value = ''
+      ..isLogin.value = false;
   }
 
   static String generateBuvid() {

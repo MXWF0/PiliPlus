@@ -213,7 +213,7 @@ $TabsPatchMaterial = "lib/scripts/material/tabs.patch"
 
 $patches_material = @($ModalBarrierPatchMaterial, $NavigationDrawerPatchMaterial, $PopupMenuPatchMaterial,
                     $FABPatchMaterial, $TextFieldPatchMaterial, $ScaffoldPatchMaterial, $RefreshIndicatorPatchMaterial,
-                    $TabsPatchMaterial)
+                    $TabsPatchMaterial, "lib/scripts/material/advanced_materials.patch")
 
 $PubCacheDir = "~/.pub-cache"
 
@@ -246,6 +246,8 @@ try {
 }
 
 flutter pub get
+
+& "$env:GITHUB_WORKSPACE/lib/scripts/apply_layered_transition.ps1"
 
 $MaterialUiDir = Get-ChildItem "$PubCacheDir/hosted/pub.dev" -Directory |
     Where-Object { $_.Name -like "material_ui-*" } |

@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:PiliPlus/common/widgets/motion/cover_motion.dart';
+
 import 'package:PiliPlus/common/widgets/fractionally_sized_box.dart';
 import 'package:PiliPlus/common/widgets/image_viewer/gallery_viewer.dart';
 import 'package:PiliPlus/common/widgets/image_viewer/hero_dialog_route.dart';
@@ -50,15 +52,22 @@ abstract final class PageUtils {
     int? quality,
     ValueChanged<int>? onPageChanged,
     String tag = '',
+    bool? fade,
+    bool indexedHeroTags = false,
+    Duration? transitionDuration,
   }) {
+    final item = imgList[initialPage];
     return Get.key.currentState!.push<void>(
       HeroDialogRoute(
+        fade: fade ?? (tag.isEmpty || item.isLongPic),
+        transitionDurationOverride: transitionDuration,
         pageBuilder: (context, animation, secondaryAnimation) => GalleryViewer(
           sources: imgList,
           initIndex: initialPage,
           quality: quality ?? GlobalData().imgQuality,
           onPageChanged: onPageChanged,
           tag: tag,
+          indexedHeroTags: indexedHeroTags,
         ),
       ),
     );
@@ -235,6 +244,7 @@ abstract final class PageUtils {
     DynamicItemModel item, {
     bool isPush = false,
     bool viewComment = false,
+    Future<void> Function(int cid, Dimension? dimension)? openVideo,
   }) async {
     feedBack();
 
@@ -304,6 +314,7 @@ abstract final class PageUtils {
           final res = await SearchHttp.ab2cWithDimension(bvid: bvid);
           final cid = res?.cid;
           if (cid != null) {
+            if (openVideo != null) return await openVideo(cid, res!.dimension);
             toVideoPage(
               bvid: bvid,
               cid: cid,
@@ -531,6 +542,7 @@ abstract final class PageUtils {
   }
 
   static Future<void>? toVideoPage({
+    CoverTransitionData? coverTransition,
     VideoType videoType = VideoType.ugc,
     int? aid,
     String? bvid,
@@ -560,7 +572,9 @@ abstract final class PageUtils {
       'progress': ?progress,
       'videoType': videoType,
       'isVertical': dimension?.isVertical ?? isVertical,
+      'dimension': ?dimension,
       'heroTag': Utils.makeHeroTag(cid),
+      'coverTransition': ?coverTransition,
       rootRpIdKey: ?rootRpId,
       secondRpIdKey: ?secondRpId,
       ...?extraArguments,
@@ -584,7 +598,7 @@ abstract final class PageUtils {
       if (isPgc) {
         viewPgc(
           seasonId: isSeason ? id : null,
-          epId: isSeason ? null : id,
+          epId: isSeason ? null : .parse(id),
           progress: progress,
           off: off,
           viewLater: viewLater,
@@ -592,7 +606,7 @@ abstract final class PageUtils {
       } else {
         viewPugv(
           seasonId: isSeason ? id : null,
-          epId: isSeason ? null : id,
+          epId: isSeason ? null : .parse(id),
           aid: aid,
           progress: progress,
           off: off,
@@ -621,8 +635,8 @@ abstract final class PageUtils {
   }
 
   static Future<void> viewPgc({
-    dynamic seasonId,
-    dynamic epId,
+    Object? seasonId,
+    int? epId,
     int? progress, // milliseconds
     bool off = false,
     bool viewLater = false,
@@ -632,88 +646,30 @@ abstract final class PageUtils {
       final res = await SearchHttp.pgcInfo(seasonId: seasonId, epId: epId);
       SmartDialog.dismiss();
       if (res case Success(:final response)) {
-        final episodes = response.episodes;
-        final hasEpisode = episodes != null && episodes.isNotEmpty;
+        final (EpisodeItem? episode, int? sectionIndex) = response.findEpisode(
+          epId,
+        );
 
-        EpisodeItem? episode;
-
-        void viewSection(EpisodeItem episode) {
+        if (episode != null) {
           toVideoPage(
-            videoType: VideoType.ugc,
+            videoType: .pgc,
             bvid: episode.bvid!,
             cid: episode.cid!,
-            seasonId: response.seasonId,
-            epId: episode.epId,
+            seasonId: response.seasonId!,
+            epId: episode.epId!,
             cover: episode.cover,
             title: episode.title,
             progress: progress,
             extraArguments: {
-              'pgcApi': true,
               'pgcItem': response,
               if (viewLater) 'viewLater': true,
+              'sectionIndex': ?sectionIndex,
             },
             off: off,
           );
-        }
-
-        if (epId != null) {
-          epId = epId.toString();
-          if (hasEpisode) {
-            episode = episodes.firstWhereOrNull(
-              (item) => item.epId.toString() == epId,
-            );
-          }
-
-          // find section
-          if (episode == null) {
-            final sections = response.section;
-            if (sections != null && sections.isNotEmpty) {
-              for (final section in sections) {
-                final episodes = section.episodes;
-                if (episodes != null && episodes.isNotEmpty) {
-                  for (final episode in episodes) {
-                    if (episode.epId.toString() == epId) {
-                      // view as ugc
-                      viewSection(episode);
-                      return;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (hasEpisode) {
-          episode ??= findEpisode(
-            episodes,
-            epId: response.userStatus?.progress?.lastEpId,
-          );
-          toVideoPage(
-            videoType: VideoType.pgc,
-            bvid: episode.bvid!,
-            cid: episode.cid!,
-            seasonId: response.seasonId,
-            epId: episode.epId,
-            pgcType: response.type,
-            cover: episode.cover,
-            progress: progress,
-            extraArguments: {
-              'pgcItem': response,
-              if (viewLater) 'viewLater': true,
-            },
-            off: off,
-          );
-          return;
         } else {
-          episode ??= response.section?.firstOrNull?.episodes?.firstOrNull;
-          if (episode != null) {
-            viewSection(episode);
-            return;
-          }
+          SmartDialog.showToast('剧集为空');
         }
-
-        SmartDialog.showToast('资源加载失败');
       } else {
         res.toast();
       }
@@ -725,8 +681,8 @@ abstract final class PageUtils {
   }
 
   static Future<void> viewPugv({
-    dynamic seasonId,
-    dynamic epId,
+    Object? seasonId,
+    int? epId,
     int? aid,
     int? progress, // milliseconds
     bool off = false,
@@ -742,18 +698,20 @@ abstract final class PageUtils {
           EpisodeItem? episode;
           if (aid != null) {
             episode = episodes.firstWhereOrNull((e) => e.aid == aid);
+          } else {
+            epId ??= response.userStatus?.progress?.lastEpId;
+            if (epId != null) {
+              episode = episodes.firstWhereOrNull((e) => e.id == epId);
+            }
           }
-          episode ??= findEpisode(
-            episodes,
-            epId: epId ?? response.userStatus?.progress?.lastEpId,
-            isPgc: false,
-          );
+          episode ??= episodes.first;
+
           toVideoPage(
-            videoType: VideoType.pugv,
+            videoType: .pugv,
             aid: episode.aid!,
             cid: episode.cid!,
-            seasonId: response.seasonId,
-            epId: episode.id,
+            seasonId: response.seasonId!,
+            epId: episode.id!,
             cover: episode.cover,
             progress: progress,
             extraArguments: {

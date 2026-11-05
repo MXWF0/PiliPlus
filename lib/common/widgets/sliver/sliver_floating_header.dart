@@ -17,9 +17,11 @@
 
 import 'dart:math' as math;
 
+import 'package:PiliPlus/common/widgets/scroll_intent.dart';
+
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/rendering.dart'
-    show RenderSliverSingleBoxAdapter, SliverGeometry, ScrollDirection;
+    show RenderSliverSingleBoxAdapter, SliverGeometry;
 import 'package:material_ui/material_ui.dart';
 
 /// ref [SliverFloatingHeader]
@@ -36,9 +38,20 @@ class SliverFloatingHeaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final glass =
+        Theme.of(context).extension<SurfaceMaterialTheme>()?.enabled ?? false;
     return _SliverFloatingHeaderWidget(
-      backgroundColor: backgroundColor,
-      child: _SliverFloatingHeaderScroll(child: child),
+      backgroundColor: glass ? Colors.transparent : backgroundColor,
+      child: _SliverFloatingHeaderScroll(
+        child: SurfaceMaterial(
+          kind: SurfaceMaterialKind.appBar,
+          material: Material(
+            color: backgroundColor,
+            shape: const RoundedRectangleBorder(),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -82,7 +95,7 @@ class _SliverFloatingHeaderScrollState
     if (_position!.isScrollingNotifier.value) {
       final RenderSliverFloatingHeader? renderer = context
           .findAncestorRenderObjectOfType<RenderSliverFloatingHeader>();
-      renderer?.updateScrollStartDirection(_position!.userScrollDirection);
+      renderer?.resetScrollIntent();
     }
   }
 
@@ -135,29 +148,28 @@ class RenderSliverFloatingHeader extends RenderSliverSingleBoxAdapter {
             effectiveScrollOffset < child!.size.height);
   }
 
-  ScrollDirection? _lastStartedScrollDirection;
+  final _scrollIntent = ScrollVisibility();
 
-  void updateScrollStartDirection(ScrollDirection direction) {
-    _lastStartedScrollDirection = direction;
-  }
+  void resetScrollIntent() => _scrollIntent.reset();
 
   @override
   void performLayout() {
     if (!floatingHeaderNeedsToBeUpdated) {
       effectiveScrollOffset = constraints.scrollOffset;
+      _scrollIntent.reset();
     } else {
       double delta =
           lastScrollOffset! -
           constraints.scrollOffset; // > 0 when the header is growing
-      if (constraints.userScrollDirection == .forward ||
-          _lastStartedScrollDirection == .forward) {
+      final intent = _scrollIntent.updateDelta(-delta);
+      if (intent == .forward) {
         final childExtent = child!.size.height;
         if (effectiveScrollOffset > childExtent) {
           effectiveScrollOffset = childExtent; // The header is now just above the start edge of viewport.
         }
       } else {
         // delta > 0 and scrolling forward is a contradiction. Assume that it's noise (set delta to 0).
-        delta = clampDouble(delta, -double.infinity, 0);
+        delta = intent == .reverse ? math.min(delta, 0) : 0;
       }
       effectiveScrollOffset = clampDouble(
         effectiveScrollOffset - delta,

@@ -38,8 +38,7 @@ class AboutPage extends StatefulWidget {
 }
 
 class _AboutPageState extends State<AboutPage> {
-  final currentVersion =
-      '${BuildConfig.versionName}+${BuildConfig.versionCode}';
+  final currentVersion = BuildConfig.versionName;
   RxString cacheSize = ''.obs;
 
   late int _pressCount = 0;
@@ -115,7 +114,7 @@ class _AboutPageState extends State<AboutPage> {
           ),
           ListTile(
             title: Text(
-              Constants.appName,
+              'PiliPlus_MX',
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium!.copyWith(height: 2),
             ),

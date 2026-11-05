@@ -1,9 +1,13 @@
+import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 
 class RcmdController extends CommonListController {
+  @override
+  Object get dataScope => Accounts.main;
+
   late bool enableSaveLastData = Pref.enableSaveLastData;
   final bool appRcmd = Pref.appRcmd;
 
@@ -28,11 +32,6 @@ class RcmdController extends CommonListController {
   }
 
   @override
-  bool handleError(String? errMsg) {
-    return enableSaveLastData;
-  }
-
-  @override
   void handleListResponse(List dataList) {
     if (enableSaveLastData && page == 0) {
       if (loadingState.value case Success(:final response)) {
@@ -52,6 +51,7 @@ class RcmdController extends CommonListController {
 
   @override
   Future<void> onRefresh() {
+    if (isClosed || isLoading) return Future.value();
     page = 0;
     isEnd = false;
     return queryData();

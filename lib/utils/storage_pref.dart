@@ -742,6 +742,12 @@ abstract final class Pref {
       !Platform.isIOS &&
       _setting.get(SettingBoxKey.dynamicColor, defaultValue: true);
 
+  static bool get softDynamicColors =>
+      _setting.get(SettingBoxKey.softDynamicColors, defaultValue: false);
+
+  static bool get advancedMaterials =>
+      _setting.get(SettingBoxKey.advancedMaterials, defaultValue: false);
+
   static bool get enableSystemProxy =>
       _setting.get(SettingBoxKey.enableSystemProxy, defaultValue: false);
 
@@ -768,6 +774,12 @@ abstract final class Pref {
 
   static bool get enableMYBar =>
       _setting.get(SettingBoxKey.enableMYBar, defaultValue: true);
+
+  static bool get coverPageTransition =>
+      _setting.get(SettingBoxKey.coverPageTransition, defaultValue: false);
+
+  static bool get layeredPageTransition =>
+      _setting.get(SettingBoxKey.layeredPageTransition, defaultValue: false);
 
   static Transition get pageTransition =>
       Transition.values[_setting.get(
@@ -1065,7 +1077,7 @@ abstract final class Pref {
       _setting.get(SettingBoxKey.saveReply, defaultValue: true);
 
   static bool get floatingNavBar =>
-      _setting.get(SettingBoxKey.floatingNavBar, defaultValue: false);
+      _setting.get(SettingBoxKey.floatingNavBar, defaultValue: true);
 
   static bool get removeSafeArea =>
       _setting.get(SettingBoxKey.removeSafeArea, defaultValue: false);

@@ -20,6 +20,7 @@ import 'package:PiliPlus/models/common/member/tab_type.dart';
 import 'package:PiliPlus/models/common/mine_tab_type.dart';
 import 'package:PiliPlus/models/common/msg/msg_unread_type.dart';
 import 'package:PiliPlus/models/common/nav_bar_config.dart';
+import 'package:PiliPlus/models/common/page_transition.dart';
 import 'package:PiliPlus/models/common/theme/theme_color_type.dart';
 import 'package:PiliPlus/models/common/theme/theme_type.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
@@ -114,7 +115,12 @@ List<SettingsModel> get styleSettings => [
   NormalModel(
     title: '页面过渡动画',
     leading: const Icon(Icons.animation),
-    getSubtitle: () => '当前：${Pref.pageTransition.name}',
+    getSubtitle: () =>
+        '当前：${Pref.coverPageTransition
+            ? '封面连续（横屏视频样板）'
+            : Pref.layeredPageTransition
+            ? '层叠右入'
+            : Pref.pageTransition.label}',
     onTap: _showTransitionDialog,
   ),
   const SwitchModel(
@@ -136,7 +142,7 @@ List<SettingsModel> get styleSettings => [
     title: '悬浮底栏',
     leading: Icon(MdiIcons.soundbar),
     setKey: SettingBoxKey.floatingNavBar,
-    defaultVal: false,
+    defaultVal: true,
     needReboot: true,
   ),
   SwitchModel(
@@ -396,19 +402,6 @@ List<SettingsModel> get styleSettings => [
     ),
     title: '首页标签页',
     subtitle: '删除或调换首页标签页',
-    leading: const Icon(Icons.toc_outlined),
-  ),
-  NormalModel(
-    onTap: (context, setState) => Get.toNamed(
-      '/barSetting',
-      arguments: {
-        'key': SettingBoxKey.navBarSort,
-        'defaultBars': NavigationBarType.values,
-        'title': 'Navbar',
-      },
-    ),
-    title: 'Navbar编辑',
-    subtitle: '删除或调换Navbar',
     leading: const Icon(Icons.toc_outlined),
   ),
   SwitchModel(
@@ -688,17 +681,31 @@ Future<void> _showTransitionDialog(
   BuildContext context,
   VoidCallback setState,
 ) async {
-  final res = await showDialog<Transition>(
+  final res = await showDialog<int>(
     context: context,
-    builder: (context) => SelectDialog<Transition>(
+    builder: (context) => SelectDialog<int>(
       title: '页面过渡动画',
-      value: Pref.pageTransition,
-      values: Transition.values.map((e) => (e, e.name)).toList(),
+      value: Pref.coverPageTransition
+          ? -2
+          : Pref.layeredPageTransition
+          ? -1
+          : Pref.pageTransition.index,
+      values: [
+        (-2, '封面连续（横屏视频样板）'),
+        (-1, '层叠右入'),
+        ...Transition.values.map((e) => (e.index, e.label)),
+      ],
     ),
   );
   if (res != null) {
-    Get.rootController.defaultTransition = res;
-    await GStorage.setting.put(SettingBoxKey.pageTransition, res.index);
+    if (res >= 0) {
+      Get.rootController.defaultTransition = Transition.values[res];
+    }
+    await GStorage.setting.putAll({
+      SettingBoxKey.coverPageTransition: res == -2,
+      SettingBoxKey.layeredPageTransition: res == -1,
+      if (res >= 0) SettingBoxKey.pageTransition: res,
+    });
     setState();
   }
 }

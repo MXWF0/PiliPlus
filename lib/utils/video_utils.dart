@@ -34,6 +34,17 @@ abstract final class VideoUtils {
       return urls.first;
     }
 
+    if (defaultCDNService == CDNService.akamai &&
+        !(isAudio && disableAudioCDN)) {
+      // Akamai URLs have their own signature (e.g. hdnts). Replacing another
+      // CDN's host preserves the wrong signature and results in HTTP 403.
+      // Keep the API-provided URL intact, including its encoded query string.
+      return urls.firstWhere(
+        (url) => Uri.tryParse(url)?.host == CDNService.akamai.host,
+        orElse: () => urls.first,
+      );
+    }
+
     String? mcdnTf;
     String? mcdnUpgcxcode;
 
@@ -154,11 +165,13 @@ abstract final class VideoUtils {
   ) {
     assert(videoList.isNotEmpty);
 
-    final targetQuality = _findAvailableVideoQuality(
-      videoList,
-      acceptQuality,
-      preferQuality,
-    );
+    // accept_quality may advertise a tier absent from the returned DASH streams.
+    final targetQuality = videoList
+        .findTargetMedia(
+          (e) => e.id,
+          _findAvailableVideoQuality(videoList, acceptQuality, preferQuality),
+        )
+        .id;
 
     final targetFormat = supportFormats.firstWhere(
       (e) => e.quality == targetQuality,
@@ -179,7 +192,7 @@ abstract final class VideoUtils {
       orElse: () => targetQaVideoList.first,
     );
 
-    return (targetQuality, targetFormat, targetDecode, targetVideo);
+    return (targetVideo.id, targetFormat, targetDecode, targetVideo);
   }
 
   static AudioItem findTargetAudio(

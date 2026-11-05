@@ -118,6 +118,7 @@ mixin SearchVideoPanelMixin<S extends SearchVideoPanel>
           controller.onLoadMore();
         }
         return VideoCardH(
+          coverMotion: true,
           videoItem: list[index],
           onRemove: () => controller.loadingState
             ..value.data!.removeAt(index)

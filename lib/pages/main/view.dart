@@ -1,3 +1,5 @@
+import 'package:PiliPlus/common/widgets/scroll_intent.dart';
+
 import 'dart:io';
 
 import 'package:PiliPlus/common/style.dart';
@@ -82,6 +84,7 @@ class _MainAppState extends PopScopeState<MainApp>
   void didPopNext() {
     addObserverMobile(this);
     _mainController
+      ..restoreBars()
       ..checkUnreadDynamic()
       ..checkDefaultSearch(true)
       ..checkUnread(_mainController.useBottomNav);
@@ -98,6 +101,7 @@ class _MainAppState extends PopScopeState<MainApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _mainController
+        ..restoreBars()
         ..checkUnreadDynamic()
         ..checkDefaultSearch(true)
         ..checkUnread(_mainController.useBottomNav);
@@ -135,6 +139,12 @@ class _MainAppState extends PopScopeState<MainApp>
 
   @override
   void onPopInvokedWithResult(bool didPop, Object? result) {
+    if (didPop) return;
+    if (_mainController.navigationBars[_mainController.selectedIndex.value] ==
+        NavigationBarType.mall) {
+      _mainController.onMallBack();
+      return;
+    }
     if (_mainController.directExitOnBack) {
       _onBack();
     } else {
@@ -211,22 +221,18 @@ class _MainAppState extends PopScopeState<MainApp>
       if (_mainController.hideBottomBar) {
         if (_mainController.barOffset case final barOffset?) {
           return Obx(
-            () => FractionalTranslation(
-              translation: Offset(
-                0.0,
-                barOffset.value / Style.topBarHeight,
-              ),
-              child: bottomNav,
+            () => ScrollLinkedNavigation(
+              offset: barOffset.value / Style.topBarHeight,
+              animate: false,
+              child: bottomNav!,
             ),
           );
         }
         if (_mainController.showBottomBar case final showBottomBar?) {
           return Obx(
-            () => AnimatedSlide(
-              curve: Curves.easeInOutCubicEmphasized,
-              duration: const Duration(milliseconds: 500),
-              offset: Offset(0, showBottomBar.value ? 0 : 1),
-              child: bottomNav,
+            () => ScrollLinkedNavigation(
+              offset: showBottomBar.value ? 0 : 1,
+              child: bottomNav!,
             ),
           );
         }
@@ -338,7 +344,11 @@ class _MainAppState extends PopScopeState<MainApp>
     Widget? bottomNav;
     final EdgeInsets padding;
     if (_mainController.useBottomNav) {
-      bottomNav = _bottomNav;
+      final mallKeyboard =
+          MediaQuery.viewInsetsOf(context).bottom > 0 &&
+          _mainController.navigationBars[_mainController.selectedIndex.value] ==
+              NavigationBarType.mall;
+      bottomNav = mallKeyboard ? null : _bottomNav;
       if (bottomNav != null) {
         bottomNav = MediaQuery.removePadding(
           context: context,
@@ -366,6 +376,9 @@ class _MainAppState extends PopScopeState<MainApp>
         sideBar: sideBar,
         bottomNav: bottomNav,
         body: Padding(padding: padding, child: child),
+        onBottomNavHeightChanged: (height) {
+          if (mounted) _mainController.bottomNavHeight.value = height;
+        },
       ),
     );
 

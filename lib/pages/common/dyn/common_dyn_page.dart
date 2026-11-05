@@ -1,3 +1,4 @@
+import 'package:PiliPlus/common/widgets/loading_widget/list_body.dart';
 import 'package:PiliPlus/common/skeleton/video_reply.dart';
 import 'package:PiliPlus/common/sliver_single_child_delegate.dart';
 import 'package:PiliPlus/common/style.dart';
@@ -8,13 +9,14 @@ import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:PiliPlus/common/widgets/sliver/sliver_pinned_header.dart';
 import 'package:PiliPlus/common/widgets/view_safe_area.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
-    show ReplyInfo;
+    show ReplyInfo, MainListReply;
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/enum_with_label.dart';
 import 'package:PiliPlus/pages/article/widgets/sliver_list.dart';
 import 'package:PiliPlus/pages/common/dyn/common_dyn_controller.dart';
 import 'package:PiliPlus/pages/common/fab_mixin.dart';
-import 'package:PiliPlus/pages/video/reply/vote/reply_vote_item.dart';
+import 'package:PiliPlus/pages/common/reply/reply_footer_mixin.dart';
+import 'package:PiliPlus/pages/common/reply/vote/reply_vote_item.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:PiliPlus/pages/video/reply_reply/view.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
@@ -74,6 +76,7 @@ abstract class CommonDynPageState<T extends StatefulWidget> extends State<T>
         SingleTickerProviderStateMixin<T>,
         BaseFabMixin,
         FabMixin,
+        ReplyFooterMixin<T, MainListReply>,
         CommonDynPageMixin<T> {}
 
 abstract class CommonDynPageMultiState<T extends StatefulWidget>
@@ -82,6 +85,7 @@ abstract class CommonDynPageMultiState<T extends StatefulWidget>
         TickerProviderStateMixin<T>,
         BaseFabMixin,
         FabMixin,
+        ReplyFooterMixin<T, MainListReply>,
         CommonDynPageMixin<T> {
   late final TabController tabController;
 
@@ -103,7 +107,13 @@ abstract class CommonDynPageMultiState<T extends StatefulWidget>
 }
 
 mixin CommonDynPageMixin<T extends StatefulWidget>
-    on State<T>, TickerProvider, BaseFabMixin<T>, FabMixin<T> {
+    on
+        State<T>,
+        TickerProvider,
+        BaseFabMixin<T>,
+        FabMixin<T>,
+        ReplyFooterMixin<T, MainListReply> {
+  @override
   CommonDynController get controller;
   bool get isArticle => false;
 
@@ -112,7 +122,8 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
   dynamic get arguments;
 
   late ThemeData theme;
-  late EdgeInsets padding;
+  @override
+  ColorScheme get colorScheme => theme.colorScheme;
   late bool isPortrait;
   late double maxWidth;
   late double maxHeight;
@@ -125,11 +136,10 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
     maxWidth = size.width;
     maxHeight = size.height;
     isPortrait = size.isPortrait;
-    padding = MediaQuery.viewPaddingOf(context);
   }
 
   @override
-  bool onNotification(UserScrollNotification notification) {
+  bool onNotification(ScrollNotification notification) {
     if (notification.metrics.axisDirection == .down) {
       return super.onNotification(notification);
     }
@@ -200,18 +210,11 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
                 }
               }
               if (index == response.length) {
+                if (controller.foldCard != null) return buildFooter();
                 controller.onLoadMore();
-                return Container(
-                  alignment: Alignment.center,
-                  margin: EdgeInsets.only(bottom: padding.bottom),
-                  height: 125,
-                  child: Text(
-                    controller.isEnd ? '没有更多了' : '加载中...',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
+                return Padding(
+                  padding: EdgeInsets.only(bottom: padding.bottom),
+                  child: ListRequestFooter(controller: controller, height: 125),
                 );
               } else {
                 return buildReply(context, index, response[index]);
