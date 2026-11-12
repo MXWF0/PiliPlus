@@ -1,33 +1,45 @@
-<div align="center">
-    <img width="200" height="200" src="assets/images/logo/logo.png">
-</div>
-
-
 
 <div align="center">
-    <h1>PiliPlus</h1>
+  <img src="assets/images/logo/logo.png" width="150" alt="PiliPlus Logo">
+
+  # PiliPlus
+
+  基于 Flutter 开发的哔哩哔哩第三方客户端
+
+  **简体中文** | [English](README.en.md)
+
+  <p>
+    <a href="https://github.com/MXWF0/PiliPlus/stargazers">
+      <img src="https://img.shields.io/github/stars/MXWF0/PiliPlus?style=flat-square" alt="Stars">
+    </a>
+    <a href="https://github.com/MXWF0/PiliPlus">
+      <img src="https://img.shields.io/github/repo-size/MXWF0/PiliPlus?style=flat-square" alt="Repository Size">
+    </a>
+    <a href="LICENSE">
+      <img src="https://img.shields.io/github/license/MXWF0/PiliPlus?style=flat-square" alt="License">
+    </a>
+    <a href="https://github.com/bggRGjQaUbCoE/PiliPlus/releases">
+      <img src="https://img.shields.io/github/v/release/bggRGjQaUbCoE/PiliPlus?style=flat-square&label=upstream%20release" alt="Upstream Release">
+    </a>
+  </p>
+
+  [下载安装](#下载安装) · [主要功能](#主要功能) · [界面预览](#界面预览) · [本地构建](#本地构建)
+
+</div>
+
+---
+
+## 界面预览
+
 <div align="center">
+  <img src="assets/screenshots/510shots_so.png" width="32%" alt="PiliPlus Screenshot 1">
+  <img src="assets/screenshots/174shots_so.png" width="32%" alt="PiliPlus Screenshot 2">
+  <img src="assets/screenshots/850shots_so.png" width="32%" alt="PiliPlus Screenshot 3">
 
-中文 | [English](README.en.md)
-
-![GitHub repo size](https://img.shields.io/github/repo-size/bggRGjQaUbCoE/PiliPlus) 
-![GitHub Repo stars](https://img.shields.io/github/stars/bggRGjQaUbCoE/PiliPlus) 
-![GitHub all releases](https://img.shields.io/github/downloads/bggRGjQaUbCoE/PiliPlus/total) 
-</div>
-    <p>使用Flutter开发的BiliBili第三方客户端</p>
-    
-<img src="assets/screenshots/510shots_so.png" width="32%" alt="home" />
-<img src="assets/screenshots/174shots_so.png" width="32%" alt="home" />
-<img src="assets/screenshots/850shots_so.png" width="32%" alt="home" />
-<br/>
-<img src="assets/screenshots/main_screen.png" width="96%" alt="home" />
-<br/>
+  <img src="assets/screenshots/main_screen.png" width="97%" alt="PiliPlus Main Screen">
 </div>
 
-
-<br/>
-
-## 适配平台
+## 支持平台
 
 - [x] Android
 - [x] iOS
@@ -37,219 +49,153 @@
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/piliplus.svg)](https://repology.org/project/piliplus/versions)
 
-## refactor
+## 主要功能
 
-- [ ] gRPC [wip]
-- [x] 用户界面
-- [x] 其他
+### 视频播放
 
-## feat
+- 支持视频、番剧、直播及音频播放
+- 多 P 视频、合集播放与播放列表管理
+- 倍速播放、长按倍速及播放手势控制
+- 画质、音质与解码格式选择
+- 硬件加速、画中画与横屏适配
+- 离线缓存与播放进度记忆
+- 高能进度条与视频缩略图预览
+- 弹幕、字幕及高级弹幕设置
+- DLNA 投屏与 SponsorBlock
+- 跳过番剧片头、片尾
+- 视频超分辨率与 AI 原声翻译
 
-- [x] 编辑动态
-- [x] DLNA 投屏
-- [x] 离线缓存/播放
-- [x] 移动端支持点击弹幕悬停，点赞、复制、举报 by [@My-Responsitories](https://github.com/My-Responsitories)
-- [x] 播放音频
-- [x] 跳过番剧片头/片尾
-- [x] 安卓端 `loudnorm` 适配 by [@My-Responsitories](https://github.com/My-Responsitories)
-- [x] Win/Mac 支持极验、短信登录 by [@My-Responsitories](https://github.com/My-Responsitories)
-- [x] 视频截取动图 by [@My-Responsitories](https://github.com/My-Responsitories)
-- [x] AI 原声翻译
-- [x] SuperChat
-- [x] 播放课堂视频
-- [x] 发起投票
-- [x] 发布动态/评论支持`富文本编辑`/`表情显示`/`@用户`
-- [x] 修改消息设置
-- [x] 修改聊天设置
-- [x] 展示折叠消息
-- [x] 查看用户图文
-- [x] 动态话题
-- [x] 直播分区
-- [x] 分享`视频`/`番剧`/`动态`/`专栏`/`直播`至消息
-- [x] 创建/修改/删除关注分组
-- [x] 移除粉丝
-- [x] 直播弹幕发送表情
-- [x] 收藏夹排序
-- [x] 稍后再看 ~~`未看`~~ / `未看完` / ~~`已看完`~~ 分类
-- [x] WebDAV 备份/恢复设置
-- [x] 保存评论/动态
-- [x] 高级弹幕 by [@My-Responsitories](https://github.com/My-Responsitories)
-- [x] 取消/置顶评论
-- [x] 记笔记
-- [x] 多账号支持 by [@My-Responsitories](https://github.com/My-Responsitories)
-- [x] 屏蔽带货动态/评论
-- [x] 互动视频
-- [x] 发评/动态反诈
-- [x] 高能进度条
-- [x] 滑动跳转预览视频缩略图
-- [x] Live Photo
-- [x] 复制/移动/排序收藏夹/稍后再看视频
-- [x] 超分辨率
-- [x] 合并弹幕
-- [x] 会员彩色弹幕
-- [x] 播放全部/继续播放/倒序播放
-- [x] Cookie登录
-- [x] 显示视频分段信息
-- [x] 调节字幕大小
-- [x] 调节全屏弹幕大小
-- [x] 收藏夹/稍后再看多选删除
-- [x] 搜索用户动态
-- [x] 直播弹幕
-- [x] 修改头像/用户名/签名/性别/生日
-- [x] 创建/编辑/删除收藏夹
-- [x] 评论楼中楼查看对话
-- [x] 评论楼中楼定位点击查看的评论
-- [x] 评论楼中楼按热度/时间排序
-- [x] 评论点踩
-- [x] 私信发图
-- [x] 投币动画
-- [x] 取消/追番，更新追番状态
-- [x] 取消/订阅合集
-- [x] SponsorBlock
-- [x] 显示视频完整合集
-- [x] 三连动画
-- [x] 番剧三连
-- [x] 带图评论
-- [x] 视频TAG
-- [x] 筛选搜索
-- [x] 转发动态
-- [x] 合集图片
-- [x] 删除/置顶/撤回私信
-- [x] 举报用户/评论/视频/动态
-- [x] 删除/发布/置顶文本/图片动态
-- [x] 其他
+### 内容浏览
 
-## opt
+- 首页推荐、热门视频、番剧及直播
+- 用户主页、动态、专栏及图文内容
+- 视频搜索、热搜及搜索历史
+- 搜索排序与筛选
+- 互动视频与课堂视频
+- 直播分区与直播弹幕
+- 视频标签及相关推荐
 
-- [x] 专栏界面
-- [x] 私信界面
-- [x] 收藏面板
-- [x] PIP
-- [x] 视频封面
-- [x] 回复界面
-- [x] 系统通知
-- [x] 评论显示
-- [x] 亮度调节
-- [x] 视频播放
-- [x] 视频staff
-- [x] 防止bottomsheet遮挡全屏视频
-- [x] 其他
+### 社区互动
 
-## fix
+- 视频点赞、投币、收藏与分享
+- 评论浏览、回复、点赞及点踩
+- 楼中楼评论查看、排序与定位
+- 发布、编辑、删除及转发动态
+- 富文本编辑、表情及 @用户
+- 私信聊天、图片发送与消息管理
+- 直播弹幕与表情发送
+- 动态话题、投票及 SuperChat
 
-- [x] 番剧分集点赞/投币/收藏
-- [x] bugs
+### 个人管理
 
-<br/>
+- 多账号支持
+- 观看历史与稍后再看
+- 收藏夹创建、编辑、排序与批量管理
+- 关注分组与粉丝管理
+- 修改个人资料
+- Cookie 登录
+- WebDAV 设置备份与恢复
+- 无痕模式与游客模式
 
-## 功能
+### 个性化设置
 
-- [x] 推荐视频列表(app端)
-- [x] 最热视频列表
-- [x] 热门直播
-- [x] 番剧列表
-- [x] 屏蔽黑名单内用户视频
-- [x] 无痕模式（播放视为未登录）
-- [x] 游客模式（推荐视为未登录）
+- 亮色、暗色及跟随系统主题
+- 视频画质、音质及解码方式预设
+- 弹幕大小、字幕大小与显示设置
+- 播放手势与全屏方向设置
+- 图片质量与高帧率设置
+- 亮度调节与振动反馈
+- 横屏界面适配
 
-- [x] 用户相关
-  - [x] 粉丝、关注用户、拉黑用户查看
-  - [x] 用户主页查看
-  - [x] 关注/取关用户
-  - [x] 离线缓存
-  - [x] 稍后再看
-  - [x] 观看记录
-  - [x] 我的收藏
-  - [x] 站内私信
-  
-- [x] 动态相关
-  - [x] 全部、投稿、番剧分类查看
-  - [x] 动态评论查看
-  - [x] 动态评论回复功能
+<details>
+<summary><b>更多功能与优化</b></summary>
 
-- [x] 视频播放相关
-  - [x] 双击快进/快退
-  - [x] 双击播放/暂停
-  - [x] 垂直方向调节亮度/音量
-  - [x] 垂直方向上滑全屏、下滑退出全屏
-  - [x] 水平方向手势快进/快退
-  - [x] 全屏方向设置
-  - [x] 倍速选择/长按2倍速
-  - [x] 硬件加速（视机型而定）
-  - [x] 画质选择（高清画质未解锁）
-  - [x] 音质选择（视视频而定）
-  - [x] 解码格式选择（视视频而定）
-  - [x] 弹幕
-  - [x] 字幕
-  - [x] 记忆播放
-  - [x] 视频比例：高度/宽度适应、填充、包含等
-     
-- [x] 搜索相关
-  - [x] 热搜
-  - [x] 搜索历史
-  - [x] 默认搜索词
-  - [x] 投稿、番剧、直播间、用户搜索
-  - [x] 视频搜索排序、按时长筛选
-    
-- [x] 视频详情页相关
-  - [x] 视频选集(分p)切换
-  - [x] 点赞、投币、收藏/取消收藏
-  - [x] 相关视频查看
-  - [x] 评论用户身份标识
-  - [x] 评论(排序)查看、二楼评论查看
-  - [x] 主楼、二楼评论回复功能
-  - [x] 评论点赞
-  - [x] 评论笔记图片查看、保存
+- 移动端点击弹幕悬停及互动
+- 高级弹幕与会员彩色弹幕
+- 弹幕合并与直播弹幕表情
+- 视频截取动图与 Live Photo
+- 收藏夹及稍后再看批量操作
+- 显示视频完整合集与分段信息
+- 评论、动态保存及评论笔记
+- 带图评论与图文动态
+- 评论及动态举报
+- 粉丝移除与关注分组管理
+- 修改消息及聊天设置
+- 屏蔽带货动态、评论及黑名单用户
+- 投币动画与三连动画
+- 专栏、私信、收藏及评论界面优化
+- 视频封面、播放体验及画中画优化
+- 系统通知与界面交互优化
 
-- [x] 设置相关
-  - [x] 画质、音质、解码方式预设      
-  - [x] 图片质量设定
-  - [x] 主题模式：亮色/暗色/跟随系统
-  - [x] 震动反馈(可选)
-  - [x] 高帧率
-  - [x] 自动全屏
-  - [x] 横屏适配
-- [ ] 等等
+</details>
 
-<br/>
+## 下载安装
 
-## 下载
+可通过以下链接获取安装包或源代码：
 
-可以从 [Releases](https://github.com/bggRGjQaUbCoE/PiliPlus/releases) 下载，或克隆仓库拉取代码后在本地编译。
+- **[上游 Releases](https://github.com/bggRGjQaUbCoE/PiliPlus/releases)** — 下载已发布的安装包
+- **[本仓库源码](https://github.com/MXWF0/PiliPlus)** — 查看、克隆或下载源代码
 
-<br/>
+## 本地构建
 
-## 声明
+项目使用 Flutter 开发，构建前请安装相应版本的 Flutter SDK。
 
-此项目（PiliPlus）是个人为了兴趣而开发，仅用于学习和测试，请于下载后24小时内删除。
-所用API皆从官方网站收集，不提供任何破解内容。
-在此致敬原作者：[guozhigq/pilipala](https://github.com/guozhigq/pilipala)
-在此致敬上游作者：[orz12/PiliPalaX](https://github.com/orz12/PiliPalaX)
-本仓库做了更激进的修改，感谢原作者的开源精神。
+```bash
+git clone https://github.com/MXWF0/PiliPlus.git
 
-感谢使用
+cd PiliPlus
 
+flutter pub get
 
-<br/>
+flutter run
+```
 
-## 致谢
+具体环境要求可参考 [pubspec.yaml](pubspec.yaml)。
+
+## 项目来源
+
+本仓库基于 [PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus) 开源项目。
+
+感谢以下项目及其开发者：
+
+- [PiliPlus](https://github.com/bggRGjQaUbCoE/PiliPlus)
+- [PiliPalaX](https://github.com/orz12/PiliPalaX)
+- [PiliPala](https://github.com/guozhigq/pilipala)
+
+同时感谢所有参与项目开发、维护和贡献的开发者。
+
+## 开源项目致谢
 
 - [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect)
 - [flutter_meedu_videoplayer](https://github.com/zezo357/flutter_meedu_videoplayer)
 - [media-kit](https://github.com/media-kit/media-kit)
 - [dio](https://pub.dev/packages/dio)
-- 等等
 
-<br/>
-<br/>
-<br/>
+## 声明
+
+PiliPlus 为非官方哔哩哔哩第三方客户端，仅供学习与测试使用。
+
+本项目与哔哩哔哩官方无隶属关系，不提供任何破解内容。
+
+项目基于 [GPL-3.0 License](LICENSE) 开源。
 
 ## Star History
 
-<a href="https://star-history.dera.page/#bggRGjQaUbCoE/PiliPlus&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=bggRGjQaUbCoE/PiliPlus&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=bggRGjQaUbCoE/PiliPlus&type=Date" />
-   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=bggRGjQaUbCoE/PiliPlus&type=Date" />
- </picture>
-</a>
+<div align="center">
+  <a href="https://star-history.com/#MXWF0/PiliPlus&Date">
+    <picture>
+      <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://api.star-history.com/svg?repos=MXWF0/PiliPlus&type=Date&theme=dark"
+      />
+      <source
+        media="(prefers-color-scheme: light)"
+        srcset="https://api.star-history.com/svg?repos=MXWF0/PiliPlus&type=Date"
+      />
+      <img
+        alt="Star History Chart"
+        src="https://api.star-history.com/svg?repos=MXWF0/PiliPlus&type=Date"
+      />
+    </picture>
+  </a>
+</div>
