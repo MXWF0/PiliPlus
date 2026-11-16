@@ -10,20 +10,30 @@ abstract final class AdvancedMaterials {
   // Android blur radius. The filter object is shared; no bitmap capture is used.
   static final _blurs = List.generate(
     17,
-    (step) => ui.ImageFilter.blur(sigmaX: step / 2, sigmaY: step / 2),
+    (step) => ui.ImageFilter.blur(sigmaX: step * 7 / 16, sigmaY: step * 7 / 16),
     growable: false,
   );
 
-  static SurfaceMaterialTheme theme(ColorScheme scheme) {
-    final enabled = Pref.advancedMaterials;
+  static ui.ImageFilter blurAt(double progress) =>
+      _blurs[(progress * 16).round()];
+
+  static Color tint(ColorScheme scheme) {
     final accent = Pref.softDynamicColors
         ? scheme.primary
         : SoftDynamicColors.softenPrimary(scheme);
-    final tint = Color.lerp(
+    return Color.lerp(
       scheme.surface,
       accent,
       .06,
     )!;
+  }
+
+  static double toolbarOpacity(Brightness brightness) =>
+      brightness == Brightness.dark ? .73 : .81;
+
+  static SurfaceMaterialTheme theme(ColorScheme scheme) {
+    final enabled = Pref.advancedMaterials;
+    final color = tint(scheme);
     return SurfaceMaterialTheme(
       enabled: enabled,
       builder: (context, kind, material) {
@@ -51,17 +61,11 @@ abstract final class AdvancedMaterials {
             kind == SurfaceMaterialKind.navigationBar ||
             kind == SurfaceMaterialKind.floatingActionButton;
         final appBar = kind == SurfaceMaterialKind.appBar;
-        final opacity = scheme.brightness == Brightness.dark
-            ? (floating
-                  ? .65
-                  : appBar
-                  ? .67
-                  : .80)
-            : (floating
-                  ? .70
-                  : appBar
-                  ? .75
-                  : .90);
+        final opacity = appBar
+            ? toolbarOpacity(scheme.brightness)
+            : scheme.brightness == Brightness.dark
+            ? (floating ? .71 : .83)
+            : (floating ? .79 : .93);
         // Player menus explicitly use black surfaces with white labels even
         // when the surrounding page is light. Keep that existing dark palette.
         if (kind == SurfaceMaterialKind.menu &&
@@ -83,7 +87,7 @@ abstract final class AdvancedMaterials {
           key: enabled ? null : material.key,
           type: material.type,
           color: enabled
-              ? tint.withValues(alpha: opacity * progress)
+              ? color.withValues(alpha: opacity * progress)
               : (material.color ?? scheme.surface).withValues(alpha: 1),
           elevation: enabled ? 0 : material.elevation,
           shadowColor: material.shadowColor,
@@ -108,7 +112,7 @@ abstract final class AdvancedMaterials {
           child: ClipPath(
             clipper: ShapeBorderClipper(shape: shape),
             child: BackdropFilter(
-              filter: _blurs[(progress * 16).round()],
+              filter: blurAt(progress),
               child: foreground,
             ),
           ),

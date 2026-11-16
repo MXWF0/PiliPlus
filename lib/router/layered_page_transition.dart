@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:PiliPlus/common/widgets/motion/cover_motion.dart';
+import 'package:PiliPlus/router/search_expansion.dart';
 
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:get/get_navigation/src/routes/get_transition_mixin.dart';
@@ -13,6 +14,14 @@ abstract final class LayeredPageTransitions {
     GetPageRouteTransitionMixin.underlayTransitionAllowed = (route) =>
         route.settings.name == '/' || supports(route.settings.name);
     GetPageRouteTransitionMixin.pageTransitionsBuilder = (route) {
+      if (route.settings.name?.split('?').first == '/search') {
+        switch (route.settings.arguments) {
+          case SearchOpening.immediate:
+            return const SearchExpansionTransitionsBuilder(immediate: true);
+          case SearchExpansion():
+            return const SearchExpansionTransitionsBuilder();
+        }
+      }
       if (route.settings.arguments case final Map args
           when args['coverTransition'] is CoverTransitionData) {
         return const CoverPageTransitionsBuilder();
@@ -52,13 +61,18 @@ class LayeredPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) => LayeredPageTransition(
-    animation: animation,
-    secondaryAnimation: secondaryAnimation,
-    blur: Pref.advancedMaterials,
-    linear: route.popGestureInProgress,
-    child: child,
-  );
+  ) => MediaQuery.disableAnimationsOf(context)
+      ? ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 1),
+          child: child,
+        )
+      : LayeredPageTransition(
+          animation: animation,
+          secondaryAnimation: secondaryAnimation,
+          blur: Pref.advancedMaterials,
+          linear: route.popGestureInProgress,
+          child: child,
+        );
 }
 
 class LayeredPageTransition extends StatefulWidget {
@@ -145,6 +159,7 @@ class _LayeredPageTransitionState extends State<LayeredPageTransition> {
         if (leaving > 0) {
           if (widget.blur) {
             page = ImageFiltered(
+              enabled: leaving < 1,
               imageFilter: ui.ImageFilter.blur(
                 sigmaX: 6 * leaving,
                 sigmaY: 6 * leaving,

@@ -1,5 +1,6 @@
 package com.example.piliplus
 
+import android.content.ActivityNotFoundException
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,24 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.example.piliplus/mall")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "openBilibili") {
+                    result.notImplemented()
+                } else {
+                    val intent = packageManager.getLaunchIntentForPackage("tv.danmaku.bili")
+                    if (intent == null) {
+                        result.success(false)
+                    } else {
+                        try {
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (_: ActivityNotFoundException) {
+                            result.success(false)
+                        }
+                    }
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.example.piliplus/theme")
             .setMethodCallHandler { call, result ->
                 if (call.method != "getSystemColorRoles") {

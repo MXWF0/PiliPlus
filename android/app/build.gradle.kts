@@ -36,6 +36,9 @@ android {
     }
 
     packagingOptions.jniLibs.useLegacyPackaging = true
+    providers.gradleProperty("piliProbeLibs").orNull?.let { probeLibs ->
+        sourceSets.getByName("main").jniLibs.srcDir(probeLibs)
+    }
 
     val keyProperties = Properties().also {
         val properties = rootProject.file("key.properties")
@@ -66,7 +69,7 @@ android {
         }
         release {
             if (project.hasProperty("dev")) {
-                applicationIdSuffix = ".dev"
+                applicationIdSuffix = if (project.hasProperty("piliProbeLibs")) ".probe" else ".dev"
                 resValue(
                     type = "string",
                     name = "app_name",

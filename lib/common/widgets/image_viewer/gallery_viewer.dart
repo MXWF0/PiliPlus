@@ -355,27 +355,41 @@ class _GalleryViewerState extends State<GalleryViewer>
   }
 
   Widget get _buildIndicator => Positioned(
-    bottom: 0,
+    bottom: _padding!.bottom + 8,
     left: 0,
     right: 0,
     child: IgnorePointer(
-      child: Container(
-        padding: _padding! + const EdgeInsets.fromLTRB(12, 8, 20, 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withValues(alpha: 0.3),
-            ],
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Obx(
-          () => Text(
-            "${_currIndex.value + 1}/${widget.sources.length}",
-            style: const TextStyle(color: Colors.white),
+      child: Padding(
+        padding: EdgeInsets.only(left: _padding!.left, right: _padding!.right),
+        child: AnimatedBuilder(
+          animation:
+              ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation,
+          builder: (context, child) =>
+              ModalRoute.of(context)?.animation?.isCompleted == false
+              ? const SizedBox.shrink()
+              : child!,
+          child: Center(
+            child: SurfaceMaterial(
+              kind: SurfaceMaterialKind.floatingActionButton,
+              material: Material(
+                color: ColorScheme.of(context).surface,
+                shape: const StadiumBorder(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: Obx(
+                    () => Text(
+                      "${_currIndex.value + 1}/${widget.sources.length}",
+                      style: TextStyle(
+                        color: ColorScheme.of(context).onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -554,7 +568,7 @@ class _GalleryViewerState extends State<GalleryViewer>
           horizontalDragGestureRecognizer: _horizontalDragGestureRecognizer,
           onChangePage: _onChangePage,
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-            if (wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) {
               return child;
             }
             if (widget.quality == _quality &&
@@ -570,21 +584,13 @@ class _GalleryViewerState extends State<GalleryViewer>
                     ImageUtils.thumbnailUrl(item.url, widget.quality),
                   ),
                 );
-            return Stack(
-              fit: .expand,
-              children: [
-                fw.Image(
-                  image: previewProvider,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.low,
-                  gaplessPlayback: true,
-                ),
-                AnimatedOpacity(
-                  opacity: frame == null ? 0 : 1,
-                  duration: const Duration(milliseconds: 160),
-                  child: child,
-                ),
-              ],
+            // The decoded viewer and the preview may have different bounds.
+            // Paint only one of them, including during the first-frame handoff.
+            return fw.Image(
+              image: previewProvider,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.low,
+              gaplessPlayback: true,
             );
           },
           loadingBuilder: loadingBuilder,

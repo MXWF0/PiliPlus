@@ -105,6 +105,11 @@ class _VideoCardVState extends State<VideoCardV> {
         PageUtils.viewPgc(epId: videoItem.param!);
         break;
       case 'av':
+        if ((widget.coverMotion ? Scrollable.maybeOf(context)?.position : null)
+            case final ScrollPositionWithSingleContext position
+            when position.isScrollingNotifier.value && !position.outOfRange) {
+          position.goIdle();
+        }
         var bvid = videoItem.bvid ?? IdUtils.av2bv(videoItem.aid!);
         var cid = videoItem.cid;
         bool isVertical = false;

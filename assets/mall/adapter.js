@@ -15,21 +15,30 @@
   }
 
   const isMall = location.origin === 'https://mall.bilibili.com';
-  const legacyPages = new Set(['/', '/index.html', '/category.html', '/list.html', '/newlist.html', '/detail.html', '/orderlist.html', '/addresslist.html', '/neul-next/ticket/home.html', '/neul-next/ticket/movieHome.html', '/neul-next/ticket/collection.html', '/neul-next/ticket-renovation/detail.html']);
+  const aftersaleScope = isMall && window.__piliMallAftersaleRoute === true;
+  const isAftersaleTemplate = () => aftersaleScope &&
+    location.pathname === '/neul-next/index.html' &&
+    !!document.querySelector('.result .tab-title-flex .tab-tilte_creat');
+  const isAccount = () => isMall && location.pathname === '/neul/index.html' &&
+    new URLSearchParams(location.search).get('page') === 'box_me';
+  const mallTicketDetails = new Set(['/neul-next/ticket-renovation/detail.html', '/neul-next/ticket/detail.html', '/mall-dayu/neul-next/ticket/detail.html']);
+  const isMallTicketDetail = () => mallTicketDetails.has(location.pathname) && !!new URLSearchParams(location.search).get('id');
+  const legacyPages = new Set(['/', '/index.html', '/category.html', '/list.html', '/newlist.html', '/detail.html', '/orderlist.html', '/orderdetail.html', '/addresslist.html', '/couponlist.html', '/neul-next/ticket/home.html', '/neul-next/ticket/movieHome.html', '/neul-next/ticket/collection.html', '/neul-next/ticket/eTicket.html']);
   const neulPages = new Set(['mall_cart', 'box_me', 'aftersale_list', 'aftersale_listRefund', 'aftersale_aftersaleList']);
-  const ticketPages = new Set(['/m/platform/home.html', '/m/platform/search.html', '/m/platform/detail.html', '/h5/detail.html']);
-  const recognized = () => isMall ? legacyPages.has(location.pathname) ||
+  const ticketPages = new Set(['/platform/home.html', '/platform/search.html', '/platform/detail.html', '/m/platform/home.html', '/m/platform/search.html', '/m/platform/detail.html', '/h5/detail.html', '/m/platform/eticket.html']);
+  const recognized = () => isMall ? legacyPages.has(location.pathname) || isMallTicketDetail() || isAftersaleTemplate() ||
     (location.pathname === '/neul/index.html' && neulPages.has(new URL(location.href).searchParams.get('page'))) ||
     (location.pathname === '/neul-next/detailuniversal/detail.html' && new URL(location.href).searchParams.get('page') === 'detailuniversal_detail') ||
     (location.pathname === '/neul-next/index.html' && new URL(location.href).searchParams.get('page') === 'flow_searchResult') : ticketPages.has(location.pathname);
-  if (!recognized()) return;
+  if (!recognized() && !aftersaleScope) return;
 
   const root = document.documentElement;
   const style = document.createElement('style');
   style.id = 'piliplus-mall-adapter';
   style.textContent = `
     html[data-pp-mall] [data-pp-nav], html[data-pp-mall] [data-pp-nav-spacer],
-    html[data-pp-mall] [data-pp-promotion], html[data-pp-mall] [data-pp-promotion-row] { display:none!important; }
+    html[data-pp-mall] [data-pp-promotion], html[data-pp-mall] [data-pp-promotion-row],
+    html[data-pp-mall] [data-pp-shell-header] { display:none!important; }
     html[data-pp-mall] [data-pp-raised] { bottom:max(var(--pp-original-bottom),var(--pp-overlay))!important; }
     html[data-pp-mall] [data-pp-ticket-modal] { height:calc(100% - var(--pp-overlay))!important; }
     html[data-pp-mall] [data-pp-search-filter], html[data-pp-mall] [data-pp-search-filter] .filter-board,
@@ -108,7 +117,7 @@
       if (parent.matches('.bottom') && parent.children.length === 1 &&
           [...parent.childNodes].every(node => node.nodeType !== Node.TEXT_NODE || !node.textContent.trim())) mark(parent, 'data-pp-nav-spacer');
     }
-    if (!isMall || location.pathname === '/neul-next/ticket-renovation/detail.html') {
+    if (!isMall || isMallTicketDetail()) {
       if (element.matches('.footer-container > .footer-menu') && element.querySelector('.action-container')) raise(element);
       if (element.matches('.footer-container > .footer-menu-wrapper') && element.querySelector('.footer-menu .action-container')) raise(element);
       if (element.matches('.bili-modal') && element.querySelector('.bili-modal-box') && getComputedStyle(element).position === 'fixed') mark(element, 'data-pp-ticket-modal');
@@ -172,6 +181,36 @@
       document.querySelector('#app > .franky-scroll-view .home-main');
     const query = new URL(location.href).searchParams;
     let page = home ? 'home' : null;
+    const ticketActivity =
+      (isMall && location.pathname === '/neul-next/ticket/home.html') ||
+      (!isMall && ['/platform/home.html', '/platform/search.html', '/m/platform/home.html', '/m/platform/search.html'].includes(location.pathname));
+    if (ticketActivity) page = 'ticket-activity';
+    const ticketDetail = isMall ? isMallTicketDetail() :
+      !!query.get('id') && ['/platform/detail.html', '/m/platform/detail.html', '/h5/detail.html'].includes(location.pathname);
+    if (ticketDetail) page = 'ticket-detail';
+    if (isMall && location.pathname === '/neul-next/ticket/movieHome.html') page = 'ticket-movie';
+    if (isMall && location.pathname === '/neul-next/ticket/collection.html') page = 'ticket-collection';
+    if (isMall && location.pathname === '/orderlist.html') page = 'ticket-order';
+    if (isMall ? location.pathname === '/neul-next/ticket/eTicket.html' : location.pathname === '/m/platform/eticket.html') page = 'ticket-web';
+    if (isMall && location.pathname === '/orderdetail.html') page = 'order-detail';
+    if (isMall && location.pathname === '/couponlist.html') page = 'coupon';
+    if (isMall && location.pathname === '/neul/index.html') {
+      const accountPage = query.get('page');
+      if (accountPage === 'box_me') page = 'account';
+      if (['aftersale_list', 'aftersale_listRefund', 'aftersale_aftersaleList'].includes(accountPage)) page = 'aftersale';
+    }
+    if (isMall && location.pathname === '/addresslist.html') page = 'address';
+    if (isAftersaleTemplate()) page = 'aftersale';
+    const title = {'ticket-order':'订单中心', 'address':'地址管理', 'aftersale':'退换/售后'}[page];
+      document.querySelectorAll('#app > .header.is-browser,.result .bili-header,#app > .head,[data-pp-shell-header]').forEach(header => {
+        const position = getComputedStyle(header).position;
+        if (title && header.textContent.trim() === title &&
+            (!position || position === 'static' || position === 'relative') &&
+            header.querySelector('.icon-back,.bili-icon-back') &&
+            !header.querySelector('a,button,input,select,textarea,[role="button"]')) {
+          mark(header, 'data-pp-shell-header');
+        } else header.removeAttribute('data-pp-shell-header');
+      });
     if (isMall && location.pathname === '/category.html' && document.querySelector('.category-main .category-part-container') && document.querySelector('.header .search-input')) page = 'category';
     if (isMall && location.pathname === '/neul-next/index.html' && query.get('page') === 'flow_searchResult' && document.querySelector('.search-result-wrap .header-sticky .header-wrap') && document.querySelector('.search-result-wrap .filter-wrap')) page = 'search';
     if (isMall && ['/list.html', '/newlist.html'].includes(location.pathname) && document.querySelector('#app .main-goods-container') && document.querySelector('#app .main-filter-bar')) page = 'list';
@@ -201,6 +240,7 @@
   };
   const observer = new MutationObserver(records => {
     if (!recognized()) return;
+    if (aftersaleScope && !root.hasAttribute('data-pp-mall')) { scan(); return; }
     for (const record of records) {
       if (record.type === 'childList') {
         record.addedNodes.forEach(inspectTree);
@@ -222,7 +262,141 @@
   window.addEventListener('popstate', historyChanged);
   window.addEventListener('resize', schedule);
   window.visualViewport?.addEventListener('resize', schedule);
+  const scrollPositions = new WeakMap();
+  let scrollActive = false, scrollTimer, scrollFlush, scrollDelta = 0, scrollTop = false;
+  const reportScroll = ended => {
+    if (config.scrollEnabled && window.flutter_inappwebview?.callHandler) {
+      window.flutter_inappwebview.callHandler('piliMallScroll', {
+        delta: config.width > 0 ? scrollDelta * config.width / window.innerWidth : 0,
+        ended, top: scrollTop,
+      });
+    }
+    scrollDelta = 0;
+  };
+  const endScroll = () => {
+    if (!scrollActive) return;
+    clearTimeout(scrollTimer);
+    clearTimeout(scrollFlush);
+    scrollFlush = null;
+    reportScroll(true);
+    scrollActive = false;
+  };
+  document.addEventListener('pointerdown', event => {
+    if (!config.scrollEnabled || !root.hasAttribute('data-pp-page')) return;
+    if (event.target.closest?.('.bili-modal,.franky-popup_box,.popup-container-wrapper,.pswp--open')) {
+      endScroll();
+      return;
+    }
+    scrollActive = true;
+  }, {passive:true});
+  document.addEventListener('pointerup', () => {
+    if (scrollActive) scrollTimer = setTimeout(endScroll, 140);
+  }, {passive:true});
+  document.addEventListener('pointercancel', () => {
+    if (scrollActive) scrollTimer = setTimeout(endScroll, 140);
+  }, {passive:true});
+  document.addEventListener('scroll', event => {
+    if (!recognized()) return;
+    const element = event.target === document ? document.scrollingElement : event.target;
+    if (!(element instanceof Element) ||
+        element.closest('.bili-modal,.franky-popup_box,.popup-container-wrapper,.pswp--open') ||
+        (element !== document.scrollingElement &&
+          !element.matches('.scroll-view-container,.scroll-view-content,.scroll-container,.franky-scroll-view,.category-part-container'))) return;
+    const position = element.scrollTop;
+    const previous = scrollPositions.get(element) ?? position;
+    scrollPositions.set(element, position);
+    if (!scrollActive || !root.hasAttribute('data-pp-page')) return;
+    scrollDelta += position - previous;
+    scrollTop = position <= 0;
+    scrollFlush ??= setTimeout(() => { scrollFlush = null; reportScroll(false); }, 48);
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(endScroll, 140);
+  }, {capture:true, passive:true});
+  document.addEventListener('scrollend', event => {
+    if (event.target === document || event.target === document.scrollingElement) endScroll();
+  }, {passive:true});
+  let accountClick;
+  if (isMall) document.addEventListener('click', event => {
+    accountClick = null;
+    if (!isAccount() || !(event.target instanceof Element)) return;
+    const ticket = event.target.closest('.me-page .func-list > .func-item');
+    const order = event.target.closest('.me-page .entry-list > .entry-item');
+    if (ticket?.querySelector('.text')?.textContent.trim() === '电子票') {
+      accountClick = {kind: 'ticket', at: performance.now()};
+    } else if (order?.querySelector('.text')?.textContent.trim() === '待收货') {
+      accountClick = {kind: 'receiving', at: performance.now()};
+    }
+  }, true);
+  async function trimStaticCache(maxBytes) {
+    if (!isMall || !window.caches || navigator.onLine !== true ||
+        document.visibilityState !== 'visible') return;
+    const estimate = async () => {
+      const storage = await navigator.storage?.estimate();
+      return storage?.usageDetails?.caches;
+    };
+    let usage = await estimate();
+    if (usage != null && usage <= maxBytes) return usage;
+    const used = new Set(performance.getEntriesByType('resource').map(entry => entry.name));
+    const entries = [];
+    let total = 0;
+    for (const name of await caches.keys()) {
+      if (!/^\d{14}neul$/.test(name)) continue;
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        const url = new URL(request.url);
+        if (request.method !== 'GET' || url.origin !== 'https://s1.hdslb.com' ||
+            url.search || !/^\/bfs\/static\/neul(?:-next)?\/.+\.(?:js|css|woff2?)$/i.test(url.pathname)) continue;
+        let bytes = 0;
+        if (usage == null) {
+          const response = await cache.match(request);
+          if (!response?.ok) continue;
+          bytes = Number(response.headers.get('content-length'));
+          if (!Number.isSafeInteger(bytes) || bytes <= 0) continue;
+          total += bytes;
+        }
+        if (!used.has(request.url)) entries.push({cache, request, bytes});
+      }
+    }
+    let removed = 0;
+    for (const entry of entries) {
+      if ((usage ?? total) <= maxBytes || removed >= 64 ||
+          navigator.onLine !== true || document.visibilityState !== 'visible') break;
+      if (performance.getEntriesByName(entry.request.url, 'resource').length) continue;
+      if (await entry.cache.delete(entry.request)) {
+        total -= entry.bytes;
+        removed++;
+        if (usage != null && removed % 8 === 0) usage = await estimate() ?? usage;
+      }
+    }
+    return usage == null ? total : (await estimate() ?? usage);
+  }
   window.__piliMallAdapter = {
+    trimStaticCache,
+    updateGeometry(width, bottom) {
+      config = {...config, width, bottom};
+      schedule();
+    },
+    accountAppShortcut(url) {
+      if (!isAccount() || !url.startsWith('bilibili://mall/')) return null;
+      // The page can decorate the configured URL before opening it. Use the
+      // recent click on its actual shortcut if a new window did not carry it.
+      if (accountClick && performance.now() - accountClick.at < 2000) {
+        return accountClick.kind;
+      }
+      // Match the click against the shortcuts configured by the official page.
+      let config;
+      try {
+        config = JSON.parse(localStorage.getItem('centerConfig'));
+      } catch (error) {
+        if (error instanceof SyntaxError) return null;
+        throw error;
+      }
+      const functions = config?.funcList?.data;
+      const orders = config?.orderList?.data;
+      if (Array.isArray(functions) && functions.some(entry => entry?.name === '电子票' && entry.jumpUrl === url)) return 'ticket';
+      if (Array.isArray(orders) && orders.some(entry => entry?.name === '待收货' && entry.jumpUrl === url)) return 'receiving';
+      return null;
+    },
     update(next) {
       const geometryChanged = config.width !== next.width || config.bottom !== next.bottom;
       config = next;

@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:PiliPlus/common/assets.dart';
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/style.dart';
+import 'package:PiliPlus/common/widgets/advanced_materials.dart';
 import 'package:PiliPlus/common/widgets/cropped_image.dart';
 import 'package:PiliPlus/common/widgets/custom_icon.dart';
 import 'package:PiliPlus/common/widgets/disabled_icon.dart';
@@ -64,6 +65,7 @@ import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:collection/collection.dart';
@@ -84,6 +86,48 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
 
 part 'widgets.dart';
+
+class _PlayerHintSurface extends StatelessWidget {
+  const _PlayerHintSurface({
+    required this.padding,
+    required this.child,
+    this.radius = 64,
+  });
+
+  final EdgeInsetsGeometry padding;
+  final Widget child;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final glass = theme.extension<SurfaceMaterialTheme>()?.enabled == true;
+    final borderRadius = BorderRadius.circular(radius);
+    final surface = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: glass
+            ? AdvancedMaterials.tint(
+                theme.brightness == Brightness.dark
+                    ? theme.colorScheme
+                    : ThemeUtils.darkTheme.colorScheme,
+              ).withValues(alpha: .75)
+            : const Color(0x88000000),
+        borderRadius: borderRadius,
+      ),
+      child: child,
+    );
+    if (!glass) return surface;
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: AdvancedMaterials.blurAt(.5),
+        blendMode: BlendMode.src,
+        child: surface,
+      ),
+    );
+  }
+}
 
 class PLVideoPlayer extends StatefulWidget {
   const PLVideoPlayer({
@@ -218,39 +262,12 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       }
     }
 
-    if (visible) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _animationController.value = visible ? 1 : 0;
+    } else if (visible) {
       _animationController.forward();
     } else {
       _animationController.reverse();
-    }
-
-    if (widget.videoDetailController case final controller?) {
-      if (controller.vttSubtitlesIndex.value != 0) {
-        if (visible) {
-          _adjustSubPaddingIfNeeded();
-        } else {
-          _resetSubPaddingIfNeeded();
-        }
-      }
-    }
-  }
-
-  void _adjustSubPaddingIfNeeded() {
-    const int minPadding = 70;
-    if (plPlayerController.subtitlePaddingB < minPadding) {
-      plPlayerController
-        ..tmpSubtitlePaddingB = plPlayerController.subtitlePaddingB
-        ..subtitlePaddingB = minPadding
-        ..updateSubtitleStyle();
-    }
-  }
-
-  void _resetSubPaddingIfNeeded() {
-    if (plPlayerController.tmpSubtitlePaddingB != null) {
-      plPlayerController
-        ..subtitlePaddingB = plPlayerController.tmpSubtitlePaddingB!
-        ..updateSubtitleStyle()
-        ..tmpSubtitlePaddingB = null;
     }
   }
 
@@ -259,15 +276,19 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     super.initState();
     addObserverMobile(this);
 
-    _controlsListener = plPlayerController.showControls.listen(
-      _onControlChanged,
-    );
-
     _localTransformationController = TransformationController();
 
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 100),
+      value:
+          plPlayerController.showControls.value &&
+              !plPlayerController.controlsLock.value
+          ? 1
+          : 0,
+    );
+    _controlsListener = plPlayerController.showControls.listen(
+      _onControlChanged,
     );
     videoController = plPlayerController.videoController!;
 
@@ -342,16 +363,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     // Keep playing in the PiP window.
     if (Platform.isIOS && IOSPipHelper.isActive) return;
     if (!plPlayerController.continuePlayInBackground.value) {
-      late final player = plPlayerController.videoPlayerController;
       if (const <AppLifecycleState>[.paused, .detached].contains(state)) {
+        final player = plPlayerController.videoPlayerController;
         if (player != null && player.state.playing) {
           _pauseDueToPauseUponEnteringBackgroundMode = true;
-          player.pause();
+          plPlayerController.pause();
         }
       } else {
         if (_pauseDueToPauseUponEnteringBackgroundMode) {
           _pauseDueToPauseUponEnteringBackgroundMode = false;
-          player?.play();
+          plPlayerController.play();
         }
       }
     }
@@ -389,7 +410,6 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _doubleTapGestureRecognizer.dispose();
     _scaleGestureRecognizer.dispose();
     _brightnessListener?.cancel();
-    _resetSubPaddingIfNeeded();
     _controlsListener?.cancel();
     _animationController.dispose();
     _localTransformationController.dispose();
@@ -877,7 +897,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     final List<BottomControlType> userSpecifyItemRight = [
       if (isNotFileSource && plPlayerController.showDmChart) .dmChart,
       if (plPlayerController.isAnim) .superResolution,
-      if (isNotFileSource && plPlayerController.showViewPoints) .viewPoints,
+      if (plPlayerController.showViewPoints) .viewPoints,
       if (isNotFileSource && anySeason) .episode,
       if (flag) .fit,
       if (isNotFileSource) .aiTranslate,
@@ -962,7 +982,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       feedBack();
       plPlayerController
         ..position.value = seekToPos.inSeconds
-        ..seekTo(seekToPos, isSeek: false)
+        ..seekTo(seekToPos)
         ..seekToPos = null;
     } else {
       plPlayerController.position.value =
@@ -1029,10 +1049,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         if (!plPlayerController.hasToasted) {
           plPlayerController
             ..seekToPos = null
-            ..hasToasted = true;
-          if (plPlayerController.showSeekPreview) {
-            plPlayerController.showPreview.value = false;
-          }
+            ..hasToasted = true
+            ..hidePreviewIfNeeded();
           SmartDialog.showAttach(
             targetContext: context,
             alignment: .center,
@@ -1355,14 +1373,35 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           Positioned.fill(
             child: IgnorePointer(
               ignoring: !plPlayerController.enableDragSubtitle,
-              child: Obx(
-                () => SubtitleView(
+              child: Obx(() {
+                final config = plPlayerController.subtitleConfig.value;
+                final draggable = plPlayerController.enableDragSubtitle;
+                final subtitles = SubtitleView(
                   controller: videoController,
-                  configuration: plPlayerController.subtitleConfig.value,
-                  enableDragSubtitle: plPlayerController.enableDragSubtitle,
+                  configuration: config,
+                  enableDragSubtitle: draggable,
                   onUpdatePadding: plPlayerController.onUpdatePadding,
-                ),
-              ),
+                );
+                final hasVtt =
+                    (widget.videoDetailController?.vttSubtitlesIndex.value ??
+                        0) !=
+                    0;
+                final lift = !draggable && hasVtt && config.padding.bottom < 70
+                    ? 70 - config.padding.bottom
+                    : 0.0;
+                // Move just the subtitle layer using the same progress as the
+                // controls, leaving the saved padding and text layout intact.
+                return AnimatedBuilder(
+                  animation: lift > 0
+                      ? _animationController
+                      : kAlwaysDismissedAnimation,
+                  child: subtitles,
+                  builder: (_, child) => Transform.translate(
+                    offset: Offset(0, -lift * _animationController.value),
+                    child: child,
+                  ),
+                );
+              }),
             ),
           ),
 
@@ -1397,12 +1436,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                         ? 1.0
                         : 0.0,
                     duration: const Duration(milliseconds: 150),
-                    child: Container(
+                    child: _PlayerHintSurface(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Color(0x88000000),
-                        borderRadius: BorderRadius.all(Radius.circular(16)),
-                      ),
+                      radius: 16,
                       child: Obx(
                         () => Text(
                           '${plPlayerController.enableAutoLongPressSpeed ? (plPlayerController.longPressStatus.value ? plPlayerController.lastPlaybackSpeed : plPlayerController.playbackSpeed) * 2 : plPlayerController.longPressSpeed}倍速中',
@@ -1432,7 +1468,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                 child: Obx(
                   () => AnimatedOpacity(
                     curve: Curves.easeInOut,
-                    opacity: plPlayerController.isSeeking.value ? 1.0 : 0.0,
+                    opacity:
+                        plPlayerController.isSeeking.value &&
+                            plPlayerController.hoverDx == null
+                        ? 1.0
+                        : 0.0,
                     duration: const Duration(milliseconds: 150),
                     child: Container(
                       decoration: const BoxDecoration(
@@ -1486,14 +1526,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                   curve: Curves.easeInOut,
                   opacity: plPlayerController.volumeIndicator.value ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 150),
-                  child: Container(
+                  child: _PlayerHintSurface(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 5,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Color(0x88000000),
-                      borderRadius: BorderRadius.all(Radius.circular(64)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1535,14 +1571,10 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                 curve: Curves.easeInOut,
                 opacity: _brightnessIndicator.value ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 150),
-                child: Container(
+                child: _PlayerHintSurface(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 5,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Color(0x88000000),
-                    borderRadius: BorderRadius.all(Radius.circular(64)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1577,44 +1609,47 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         Positioned.fill(
           top: -1,
           bottom: -1,
-          child: RepaintBoundary(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                AppBarAni(
-                  isTop: true,
-                  controller: _animationController,
-                  isFullScreen: isFullScreen,
-                  removeSafeArea: plPlayerController.removeSafeArea,
-                  child: plPlayerController.isDesktopPip
-                      ? GestureDetector(
-                          behavior: HitTestBehavior.translucent,
-                          onPanStart: (_) =>
-                              WindowController.instance.window?.startDragging(),
-                          child: widget.headerControl,
-                        )
-                      : widget.headerControl,
-                ),
-                AppBarAni(
-                  isTop: false,
-                  safeBottom: widget.videoHeight != null,
-                  controller: _animationController,
-                  isFullScreen: isFullScreen,
-                  removeSafeArea: plPlayerController.removeSafeArea,
-                  child:
-                      widget.bottomControl ??
-                      BottomControl(
-                        maxWidth: maxWidth,
-                        isFullScreen: isFullScreen,
-                        controller: plPlayerController,
-                        videoDetailController: videoDetailController,
-                        buildBottomControl: () => buildBottomControl(
-                          videoDetailController,
-                          maxWidth > maxHeight,
+          child: ClipRect(
+            child: RepaintBoundary(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  AppBarAni(
+                    isTop: true,
+                    controller: _animationController,
+                    isFullScreen: isFullScreen,
+                    removeSafeArea: plPlayerController.removeSafeArea,
+                    child: plPlayerController.isDesktopPip
+                        ? GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onPanStart: (_) => WindowController.instance.window
+                                ?.startDragging(),
+                            child: widget.headerControl,
+                          )
+                        : widget.headerControl,
+                  ),
+                  AppBarAni(
+                    isTop: false,
+                    safeBottom: widget.videoHeight != null,
+                    controller: _animationController,
+                    isFullScreen: isFullScreen,
+                    removeSafeArea: plPlayerController.removeSafeArea,
+                    child:
+                        widget.bottomControl ??
+                        BottomControl(
+                          maxWidth: maxWidth,
+                          isFullScreen: isFullScreen,
+                          animCtr: _animationController,
+                          controller: plPlayerController,
+                          videoDetailController: videoDetailController,
+                          buildBottomControl: () => buildBottomControl(
+                            videoDetailController,
+                            maxWidth > maxHeight,
+                          ),
                         ),
-                      ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1752,10 +1787,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                                     if (!plPlayerController
                                         .controlsLock
                                         .value) {
-                                      plPlayerController.seekTo(
-                                        position,
-                                        isSeek: false,
-                                      );
+                                      plPlayerController.seekTo(position);
                                     }
                                   }
                                 : null,
@@ -2366,10 +2398,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                     Icons.gps_fixed_outlined,
                     color: Colors.white,
                   ),
-                  onTap: () => plPlayerController.seekTo(
-                    Duration(seconds: seekOffset),
-                    isSeek: false,
-                  ),
+                  onTap: () =>
+                      plPlayerController.seekTo(Duration(seconds: seekOffset)),
                 ),
             ],
             LiveDanmaku() => [

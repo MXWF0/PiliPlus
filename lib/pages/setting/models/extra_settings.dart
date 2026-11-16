@@ -261,13 +261,13 @@ List<SettingsModel> get extraSettings => [
   ),
   NormalModel(
     title: '最大缓存大小',
-    getSubtitle: () => '当前最大缓存大小: 「${Pref.maxCacheSize.formatSize}」',
+    getSubtitle: () => '图片缓存上限（重启后生效）: 「${Pref.maxCacheSize.formatSize}」',
     leading: const Icon(Icons.delete_outlined),
     onTap: _showCacheDialog,
   ),
   SwitchModel(
-    title: '检查更新',
-    subtitle: '每次启动时检查是否需要更新',
+    title: '自动检查 MX 更新',
+    subtitle: '启动时检查 MX 版发布',
     leading: const Icon(Icons.system_update_alt),
     setKey: SettingBoxKey.autoUpdate,
     defaultVal: true,

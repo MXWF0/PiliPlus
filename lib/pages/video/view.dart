@@ -93,6 +93,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   final heroTag = Get.arguments['heroTag'];
   final CoverTransitionData? _coverTransition =
       Get.arguments['coverTransition'];
+  late final bool _openedFromHome;
 
   late final VideoDetailController videoDetailController;
   late final VideoReplyController _videoReplyController;
@@ -155,6 +156,7 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   @override
   void initState() {
     super.initState();
+    _openedFromHome = Get.previousRoute == '/' || Get.previousRoute == '/home';
 
     videoDetailController = Get.put(VideoDetailController(), tag: heroTag);
 
@@ -603,12 +605,66 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
                       statusBarBrightness = .dark;
                       statusBarIconBrightness = .light;
                     }
-                    return SimpleAppBar(
+                    Widget buildStatusBar(
+                      Color color,
+                      Brightness barBrightness,
+                      Brightness iconBrightness,
+                    ) => SimpleAppBar(
                       height: padding.top,
-                      backgroundColor: backgroundColor,
+                      backgroundColor: color,
                       brightness: brightness,
-                      statusBarBrightness: statusBarBrightness,
-                      statusBarIconBrightness: statusBarIconBrightness,
+                      statusBarBrightness: barBrightness,
+                      statusBarIconBrightness: iconBrightness,
+                    );
+                    final sourceTheme = Theme.of(context).colorScheme;
+                    final animation = ModalRoute.of(context)?.animation;
+                    if (!_openedFromHome ||
+                        !isPortrait ||
+                        isFullScreen ||
+                        sourceTheme.brightness != Brightness.light ||
+                        animation == null ||
+                        MediaQuery.disableAnimationsOf(context)) {
+                      return buildStatusBar(
+                        backgroundColor,
+                        statusBarBrightness,
+                        statusBarIconBrightness,
+                      );
+                    }
+                    return AnimatedBuilder(
+                      animation: animation,
+                      builder: (context, _) => TweenAnimationBuilder<double>(
+                        tween: Tween<double>(
+                          begin: animation.isCompleted ? 1.0 : 0.0,
+                          end: continuous
+                              ? (animation.value >= 0.78 ? 1.0 : 0.0)
+                              : animation.value,
+                        ),
+                        duration: continuous
+                            ? const Duration(milliseconds: 200)
+                            : Duration.zero,
+                        curve: Curves.easeInOut,
+                        builder: (context, value, _) {
+                          if (value == 1) {
+                            return buildStatusBar(
+                              backgroundColor,
+                              statusBarBrightness,
+                              statusBarIconBrightness,
+                            );
+                          }
+                          final color = Color.lerp(
+                            sourceTheme.surface,
+                            backgroundColor,
+                            value,
+                          )!;
+                          final barBrightness =
+                              ThemeData.estimateBrightnessForColor(color);
+                          return buildStatusBar(
+                            color,
+                            barBrightness,
+                            barBrightness.reverse,
+                          );
+                        },
+                      ),
                     );
                   },
                 ),

@@ -33,7 +33,7 @@ enum MallDestination {
 enum MallTicketDestination {
   activity(
     '漫展演出',
-    'https://mall.bilibili.com/neul-next/ticket/home.html?noTitleBar=1',
+    'https://show.bilibili.com/platform/home.html',
   ),
   movie(
     '电影',
@@ -54,15 +54,55 @@ enum MallPageKind {
   product('商品详情'),
   search('搜索'),
   catalog('分类'),
-  cart('购物车');
+  cart('购物车'),
+  ticketActivity('漫展演出'),
+  ticketDetail('活动详情'),
+  ticketMovie('电影'),
+  ticketCollection('票务收藏'),
+  ticketOrder('订单中心'),
+  webTicket('电子票'),
+  orderDetail('订单详情'),
+  account('商城账户'),
+  address('地址管理'),
+  coupon('优惠券'),
+  service('在线客服'),
+  aftersale('退换/售后');
 
   const MallPageKind(this.label);
   final String label;
 }
 
 abstract final class MallNavigation {
+  static const mallTicketDetails = {
+    '/neul-next/ticket-renovation/detail.html',
+    '/neul-next/ticket/detail.html',
+    '/mall-dayu/neul-next/ticket/detail.html',
+  };
+
   static MallPageKind? pageKind(Uri uri) {
-    if (!isOfficial(uri) || uri.host != 'mall.bilibili.com') return null;
+    if (!isOfficial(uri)) return null;
+    if (uri.host == 'service.bilibili.com') return MallPageKind.service;
+    if ((uri.host == 'show.bilibili.com' &&
+            uri.path == '/m/platform/eticket.html') ||
+        (uri.host == 'mall.bilibili.com' &&
+            uri.path == '/neul-next/ticket/eTicket.html')) {
+      return MallPageKind.webTicket;
+    }
+    if (isTicketActivity(uri)) return MallPageKind.ticketActivity;
+    if (isTicketDetail(uri)) return MallPageKind.ticketDetail;
+    if (uri.host == 'mall.bilibili.com') {
+      if (uri.path == '/neul-next/ticket/movieHome.html') {
+        return MallPageKind.ticketMovie;
+      }
+      if (uri.path == '/neul-next/ticket/collection.html') {
+        return MallPageKind.ticketCollection;
+      }
+      if (uri.path == '/orderlist.html') return MallPageKind.ticketOrder;
+      if (uri.path == '/orderdetail.html') return MallPageKind.orderDetail;
+      if (uri.path == '/addresslist.html') return MallPageKind.address;
+      if (uri.path == '/couponlist.html') return MallPageKind.coupon;
+    }
+    if (uri.host != 'mall.bilibili.com') return null;
     if (isProductDetail(uri)) return MallPageKind.product;
     if (const {
       '/category.html',
@@ -75,15 +115,51 @@ abstract final class MallNavigation {
         uri.queryParameters['page'] == 'flow_searchResult') {
       return MallPageKind.search;
     }
-    if (uri.path == '/neul/index.html' &&
-        uri.queryParameters['page'] == 'mall_cart') {
-      return MallPageKind.cart;
+    if (uri.path == '/neul/index.html') {
+      return switch (uri.queryParameters['page']) {
+        'mall_cart' => MallPageKind.cart,
+        'box_me' => MallPageKind.account,
+        'aftersale_list' ||
+        'aftersale_listRefund' ||
+        'aftersale_aftersaleList' => MallPageKind.aftersale,
+        _ => null,
+      };
     }
     return null;
   }
 
-  static bool opensSecondary(Uri current, Uri target) =>
-      pageKind(target) != null && pageKind(target) != pageKind(current);
+  static bool isTicketActivity(Uri uri) =>
+      isOfficial(uri) &&
+      ((uri.host == 'show.bilibili.com' &&
+              const {
+                '/platform/home.html',
+                '/platform/search.html',
+                '/m/platform/home.html',
+                '/m/platform/search.html',
+              }.contains(uri.path)) ||
+          (uri.host == 'mall.bilibili.com' &&
+              uri.path == '/neul-next/ticket/home.html'));
+
+  static bool isTicketDetail(Uri uri) =>
+      isOfficial(uri) &&
+      uri.queryParameters['id']?.isNotEmpty == true &&
+      ((uri.host == 'show.bilibili.com' &&
+              const {
+                '/platform/detail.html',
+                '/m/platform/detail.html',
+                '/h5/detail.html',
+              }.contains(uri.path)) ||
+          (uri.host == 'mall.bilibili.com' &&
+              mallTicketDetails.contains(uri.path)));
+
+  static bool opensSecondary(Uri current, Uri target) {
+    final from = pageKind(current);
+    final to = pageKind(target);
+    return to != null &&
+        to != MallPageKind.account &&
+        to != from &&
+        !(from == MallPageKind.ticketOrder && to == MallPageKind.orderDetail);
+  }
 
   static bool isProductDetail(Uri uri) =>
       isOfficial(uri) &&
@@ -96,11 +172,13 @@ abstract final class MallNavigation {
   static bool isOfficial(Uri uri) =>
       uri.scheme == 'https' &&
       uri.port == 443 &&
-      const {
-        'mall.bilibili.com',
-        'show.bilibili.com',
-        'passport.bilibili.com',
-      }.contains(uri.host);
+      (const {
+            'mall.bilibili.com',
+            'show.bilibili.com',
+            'passport.bilibili.com',
+          }.contains(uri.host) ||
+          (uri.host == 'service.bilibili.com' &&
+              uri.path == '/v2/chat/h5/index.html'));
 
   static Uri normalize(Uri uri) {
     // The official homepage links this public list alias. The same page was

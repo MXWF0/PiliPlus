@@ -15,12 +15,18 @@ abstract final class ApiType {
       Api.roomEntryAction,
       Api.liveLikeReport,
       Api.mediaListHistory,
+
+      // live trace
+      Api.liveTraceE,
+      Api.liveTraceX,
+
       // Api.historyList,
       // Api.pauseHistory,
       // Api.clearHistory,
       // Api.delHistory,
       // Api.searchHistory,
       // Api.historyStatus,
+
       // progress
       Api.pgcInfo,
       Api.pugvInfo,
@@ -48,7 +54,6 @@ abstract final class ApiType {
       // Api.spaceSeason,
       // Api.spaceSeries,
       // Api.spaceBangumi,
-      // Api.spaceOpus,
       // Api.spaceFav,
       // Api.seasonSeries,
       // Api.matchInfo,

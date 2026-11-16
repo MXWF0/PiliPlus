@@ -51,7 +51,7 @@ html[data-pp-page="category"] .category-part-item {
    per changed geometry. The fallback radius remains for older WebViews. */
 html[data-pp-page="search"] [data-pp-search-filter] .filter-board {
   background-color: var(--pp-glass) !important;
-  backdrop-filter: blur(calc(var(--pp-unit) * var(--pp-glass-blur)));
+  backdrop-filter: var(--pp-glass-filter, none);
   border-radius: calc(var(--pp-unit) * 32) calc(var(--pp-unit) * 32) 0 0;
 }
 html[data-pp-page="search"] [data-pp-search-filter] .board-wrapper,

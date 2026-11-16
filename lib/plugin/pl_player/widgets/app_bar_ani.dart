@@ -51,7 +51,7 @@ class AppBarAni extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
+    final bar = SlideTransition(
       position: controller.drive(isTop ? _topPos : _bottomPos),
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -65,6 +65,17 @@ class AppBarAni extends StatelessWidget {
                 right: isFullScreen,
                 child: child,
               ),
+      ),
+    );
+    return AnimatedBuilder(
+      animation: controller,
+      child: bar,
+      builder: (context, child) => IgnorePointer(
+        ignoring: controller.isDismissed,
+        child: ExcludeSemantics(
+          excluding: controller.isDismissed,
+          child: child,
+        ),
       ),
     );
   }

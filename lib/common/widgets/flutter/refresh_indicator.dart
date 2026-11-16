@@ -10,6 +10,7 @@ import 'package:PiliPlus/common/widgets/refresh_layout.dart';
 import 'package:PiliPlus/common/widgets/scroll_behavior.dart';
 import 'package:PiliPlus/common/widgets/scroll_physics.dart'
     show BouncingScrollPhysicsExt;
+import 'package:PiliPlus/common/widgets/scroll_under_toolbar.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:extended_nested_scroll_view/refresh.dart';
@@ -312,11 +313,13 @@ class RefreshIndicatorState extends State<RefreshIndicator>
     // user dragging. It may be a result of ScrollController.jumpTo or ballistic scroll.
     // In this case, we don't want to trigger the refresh indicator.
     return _status == null &&
-        ((notification is ScrollStartNotification &&
-                notification.dragDetails != null) ||
-            (notification is ScrollUpdateNotification &&
-                notification.dragDetails != null)) &&
         notification.metrics.extentBefore == 0.0 &&
+        ((notification is OverscrollNotification &&
+                notification.dragDetails != null &&
+                notification.dragDetails!.delta.dy > 0) ||
+            (notification is ScrollUpdateNotification &&
+                notification.dragDetails != null &&
+                notification.dragDetails!.delta.dy > 0)) &&
         _start();
   }
 
@@ -518,6 +521,7 @@ class RefreshIndicatorState extends State<RefreshIndicator>
 
     child = RefreshLayout(
       body: child,
+      topInset: ToolbarScrollInset.of(context)?.extent ?? 0,
       scale: _scaleFactor,
       position: _positionFactor,
       indicator: _status == null

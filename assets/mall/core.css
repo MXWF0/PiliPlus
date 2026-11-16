@@ -1,5 +1,8 @@
 /* Core-page additions to the existing home stylesheet. Every rule requires a
    route AND component signature selected by the one adapter in adapter.js. */
+html[data-pp-page] {
+  color-scheme: var(--pp-color-scheme, light);
+}
 html:is([data-pp-page="search"], [data-pp-page="list"], [data-pp-page="detail"], [data-pp-page="cart"]),
 html:is([data-pp-page="search"], [data-pp-page="list"], [data-pp-page="detail"], [data-pp-page="cart"]) body,
 html:is([data-pp-page="search"], [data-pp-page="list"], [data-pp-page="detail"], [data-pp-page="cart"]) #app {
@@ -7,6 +10,105 @@ html:is([data-pp-page="search"], [data-pp-page="list"], [data-pp-page="detail"],
 }
 html:is([data-pp-page="search"], [data-pp-page="list"], [data-pp-page="detail"], [data-pp-page="cart"]) body {
   font-family: var(--pp-font-family);
+}
+html:is([data-pp-page^="ticket-"], [data-pp-page="order-detail"], [data-pp-page="account"], [data-pp-page="address"], [data-pp-page="coupon"], [data-pp-page="aftersale"]),
+html:is([data-pp-page^="ticket-"], [data-pp-page="order-detail"], [data-pp-page="account"], [data-pp-page="address"], [data-pp-page="coupon"], [data-pp-page="aftersale"]) :is(body, #app) {
+  background-color: var(--pp-surface) !important;
+}
+html:is([data-pp-page^="ticket-"], [data-pp-page="order-detail"], [data-pp-page="account"], [data-pp-page="address"], [data-pp-page="coupon"], [data-pp-page="aftersale"]) body {
+  font-family: var(--pp-font-family);
+}
+/* Site headers and cards identified on the account, order and ticket pages.
+   Keep the website's price, badge, rich content and transaction colors. */
+html[data-pp-page="aftersale"] .result,
+html[data-pp-page="aftersale"] .result :is(.tab-content, .scroll-view-container, .scroll-view-content, .empty) {
+  background-color: var(--pp-surface) !important;
+  color: var(--pp-on-surface) !important;
+}
+html[data-pp-page="account"] .me-page :is(.bili-header, .order-wrapper, .func-wrapper),
+html[data-pp-page="ticket-order"] .header.is-browser,
+html[data-pp-page="address"] .head:has(.icon-back),
+html[data-pp-page="aftersale"] .result :is(.bili-header, .result_top, .tab-title-flex),
+html[data-pp-page="ticket-detail"] :is(.main-info-container, .sticky-info-bar, .sticky-tabs, .base-info-box-container, .purchase-notice-floor) {
+  background-color: var(--pp-card) !important;
+  color: var(--pp-on-surface) !important;
+  border-color: var(--pp-outline) !important;
+}
+html[data-pp-page="account"] .me-page :is(.bili-header .title, .order-wrapper .top, .entry-item .text, .func-item .text),
+html[data-pp-page="account"] .me-page :is(.order-wrapper .top > .title, .func-wrapper > .title),
+html[data-pp-page="ticket-order"] .header.is-browser .header-content .content,
+html[data-pp-page="address"] .head:has(.icon-back) .title,
+html[data-pp-page="aftersale"] .result :is(.bili-header .title, .tab-tilte_creat:not(.active)),
+html[data-pp-page="ticket-detail"] :is(.main-info-container .title-text, .main-info-container .venue-name, .base-info-box-container .content-cell, .purchase-notice-floor .notice-item, .purchase-notice-floor .notice-label) {
+  color: var(--pp-on-surface) !important;
+}
+html[data-pp-page="account"] .me-page .view-all-order-button,
+html[data-pp-page="ticket-detail"] .main-info-container :is(.date-label, .venue-addr) {
+  color: var(--pp-on-surface-variant) !important;
+}
+/* Audited account shortcut PNGs: use their alpha as theme-colored line art.
+   Exact resource matches keep product images and colored logos untouched.
+   CSS selectors also cover asynchronous insertion and resource replacement. */
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/9a3e2fc5d53fbd54069fe324d1fb0d3353ba1197.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20261012/pic/9a3e2fc5d53fbd54069fe324d1fb0d3353ba1197.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/466c3cad8d68eef36034c5aeb4e24fc7326fff78.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/466c3cad8d68eef36034c5aeb4e24fc7326fff78.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/ac69c5c918bb19d0d7e62519005628db2ce8cfc6.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/ac69c5c918bb19d0d7e62519005628db2ce8cfc6.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/7c34a6d0dfbaa3475433f6409f590c3d66c61d50.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/7c34a6d0dfbaa3475433f6409f590c3d66c61d50.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/5afdb583809401ee59fc2edada8dbee3fb4fdd78.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/5afdb583809401ee59fc2edada8dbee3fb4fdd78.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/bdfbbdbd1f926317d27c65428277aaba609d0ce4.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/bdfbbdbd1f926317d27c65428277aaba609d0ce4.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/dbd0cfc9fe642260294711d870e0e49631f1ffb5.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/dbd0cfc9fe642260294711d870e0e49631f1ffb5.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/0a6e62200f7f6a5b302bd7cdf3a8b421ef2c466a.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/0a6e62200f7f6a5b302bd7cdf3a8b421ef2c466a.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/53b7a19af911a39063ad376ba8f367f03540d1f2.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251022/pic/53b7a19af911a39063ad376ba8f367f03540d1f2.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon[style*="/7497c492dd78d6cb8f1b6edbf81a75b47f4aaccd.png"] {
+  --pp-account-icon: url("https://i0.hdslb.com/bfs/marketing-config/20251028/pic/7497c492dd78d6cb8f1b6edbf81a75b47f4aaccd.png");
+}
+html[data-pp-page="account"] .me-page .func-item > .icon:is(
+  [style*="/9a3e2fc5d53fbd54069fe324d1fb0d3353ba1197.png"],
+  [style*="/466c3cad8d68eef36034c5aeb4e24fc7326fff78.png"],
+  [style*="/ac69c5c918bb19d0d7e62519005628db2ce8cfc6.png"],
+  [style*="/7c34a6d0dfbaa3475433f6409f590c3d66c61d50.png"],
+  [style*="/5afdb583809401ee59fc2edada8dbee3fb4fdd78.png"],
+  [style*="/bdfbbdbd1f926317d27c65428277aaba609d0ce4.png"],
+  [style*="/dbd0cfc9fe642260294711d870e0e49631f1ffb5.png"],
+  [style*="/0a6e62200f7f6a5b302bd7cdf3a8b421ef2c466a.png"],
+  [style*="/53b7a19af911a39063ad376ba8f367f03540d1f2.png"],
+  [style*="/7497c492dd78d6cb8f1b6edbf81a75b47f4aaccd.png"]
+) {
+  background-image: none !important;
+  background-color: var(--pp-on-surface-variant) !important;
+  -webkit-mask: var(--pp-account-icon) center / contain no-repeat;
+  mask: var(--pp-account-icon) center / contain no-repeat;
+}
+/* These three colored logos contain black outlines. A small light backing
+   preserves the official pixels and contrast without inverting their colors. */
+html[data-pp-page="account"] .me-page .func-item > .icon:is(
+  [style*="/vaneb62b0a4a656d4be79789c0987ebce7ab.png"],
+  [style*="/4x0Lb4GV1608194219914.png"],
+  [style*="/vanefe28b90146bb42b58804c5c3a6cf1b59.png"]
+) {
+  background-color: #f4f6f5 !important;
+  border-radius: 20%;
+}
+html[data-pp-page="ticket-detail"] .footer-container :is(.footer-menu, .footer-menu-wrapper):has(.action-container) {
+  background-color: var(--pp-card) !important;
+  border-color: var(--pp-outline) !important;
 }
 /* These pages have a real inner content pad; retain the body's inset on the
    legacy document-scrolling list instead of applying the same inset twice. */
@@ -236,6 +338,15 @@ html[data-pp-page="cart"] .group-item,
 html[data-pp-page="cart"] .bili-sku-item,
 html[data-pp-page="cart"] #cartFooter {
   background-color: var(--pp-card) !important;
+}
+/* Only bars already identified as positioned business controls. Keep the
+   opaque card backing when advanced materials or backdrop filtering is off. */
+@supports (backdrop-filter: blur(1px)) {
+  html[data-pp-page="detail"] .detail-container-wrap .bottom-bar-module[data-pp-raised]:has(.buy-cart-button),
+  html[data-pp-page="cart"] .bil-cart #cartFooter.bil-cart-footer.bottom-fixed[data-pp-raised]:has(.footer-content) {
+    background-color: var(--pp-business-glass, var(--pp-card)) !important;
+    backdrop-filter: var(--pp-glass-filter, none);
+  }
 }
 html[data-pp-page="cart"] #cartHeader .bili-header-main,
 html[data-pp-page="cart"] .warehouse-name,

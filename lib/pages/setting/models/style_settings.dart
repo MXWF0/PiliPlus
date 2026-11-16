@@ -112,12 +112,20 @@ List<SettingsModel> get styleSettings => [
     defaultVal: false,
     needReboot: true,
   ),
+  if (PlatformUtils.isDesktop)
+    const SwitchModel(
+      title: '首页显示刷新按钮',
+      leading: Icon(Icons.refresh),
+      setKey: SettingBoxKey.showRefreshFAB,
+      defaultVal: true,
+      needReboot: true,
+    ),
   NormalModel(
     title: '页面过渡动画',
     leading: const Icon(Icons.animation),
     getSubtitle: () =>
         '当前：${Pref.coverPageTransition
-            ? '封面连续（横屏视频样板）'
+            ? '封面连续'
             : Pref.layeredPageTransition
             ? '层叠右入'
             : Pref.pageTransition.label}',
@@ -691,7 +699,7 @@ Future<void> _showTransitionDialog(
           ? -1
           : Pref.pageTransition.index,
       values: [
-        (-2, '封面连续（横屏视频样板）'),
+        (-2, '封面连续'),
         (-1, '层叠右入'),
         ...Transition.values.map((e) => (e.index, e.label)),
       ],

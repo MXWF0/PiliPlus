@@ -33,11 +33,13 @@ class MainController extends GetxController
   RxBool? showBottomBar;
   late final bool hideBottomBar;
   late final barHideType = Pref.barHideType;
-  bool useBottomNav = false;
+  bool useBottomNav = true;
   late dynamic controller;
   final RxInt selectedIndex = 0.obs;
   Future<bool> Function()? mallGoBack;
   final bottomNavHeight = 0.0.obs;
+  final bottomNavVisibility = ValueNotifier<double?>(null);
+  final bottomBarSettling = false.obs;
 
   Future<void> onMallBack() async {
     if (await mallGoBack?.call() == true) return;
@@ -315,8 +317,8 @@ class MainController extends GetxController
           'topOrRefresh',
           const Duration(milliseconds: 500),
           () => switch (currentNav) {
-            .home => homeController.onRefresh(),
-            .dynamics => dynamicController.onRefresh(),
+            .home => homeController.showRefresh(),
+            .dynamics => dynamicController.showRefresh(),
             .mine || .mall => null,
           },
         );
@@ -332,6 +334,7 @@ class MainController extends GetxController
   }
 
   void restoreBars() {
+    bottomBarSettling.value = true;
     barOffset?.value = 0;
     showBottomBar?.value = true;
     setSearchBar();
@@ -347,7 +350,7 @@ class MainController extends GetxController
     if (navigationBars[selectedIndex.value] == NavigationBarType.home &&
         homeController.tabs[homeController.tabController.index] ==
             HomeTabType.rcmd) {
-      homeController.onRefresh();
+      homeController.showRefresh();
       return true;
     }
     return false;
@@ -355,6 +358,7 @@ class MainController extends GetxController
 
   @override
   void onClose() {
+    bottomNavVisibility.dispose();
     barOffset?.close();
     controller.dispose();
     super.onClose();

@@ -8,10 +8,12 @@ class ScrollLinkedNavigation extends StatelessWidget {
     required this.offset,
     required this.child,
     this.animate = true,
+    this.onVisibilityChanged,
   });
   final double offset;
   final Widget child;
   final bool animate;
+  final ValueChanged<double>? onVisibilityChanged;
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
     tween: Tween(begin: offset, end: offset),
@@ -20,16 +22,25 @@ class ScrollLinkedNavigation extends StatelessWidget {
         : Duration.zero,
     curve: ScrollVisibility.curve,
     child: child,
-    builder: (context, position, child) => IgnorePointer(
-      ignoring: position >= 1,
-      child: ExcludeSemantics(
-        excluding: position >= 1,
-        child: FractionalTranslation(
-          translation: Offset(0, position),
-          child: child,
+    builder: (context, position, child) {
+      if (onVisibilityChanged != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            onVisibilityChanged!(1 - position.clamp(0.0, 1.0));
+          }
+        });
+      }
+      return IgnorePointer(
+        ignoring: position >= 1,
+        child: ExcludeSemantics(
+          excluding: position >= 1,
+          child: FractionalTranslation(
+            translation: Offset(0, position),
+            child: child,
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
@@ -64,18 +75,30 @@ class ScrollVisibility {
 
   ScrollDirection? update(ScrollNotification notification) {
     if (notification.metrics.axis != Axis.vertical) return null;
+    if (notification.metrics.extentBefore == 0 &&
+        (notification is OverscrollNotification &&
+                notification.dragDetails != null &&
+                notification.overscroll < 0 ||
+            notification is ScrollUpdateNotification &&
+                notification.dragDetails != null &&
+                notification.scrollDelta! < 0)) {
+      _distance = -showDistance;
+      return _accepted = ScrollDirection.forward;
+    }
     if (notification is ScrollStartNotification) {
       reset();
       _userScrolling = notification.dragDetails != null;
     } else if (notification is UserScrollNotification) {
       _userScrolling = notification.direction != .idle;
-      if (!_userScrolling) reset();
     } else if (notification is ScrollUpdateNotification &&
         (notification.dragDetails != null || _userScrolling)) {
       return updateDelta(notification.scrollDelta!);
     } else if (notification is ScrollEndNotification) {
+      final direction = notification.metrics.extentBefore == 0
+          ? ScrollDirection.forward
+          : _accepted;
       reset();
-      if (notification.metrics.extentBefore == 0) return .forward;
+      return direction;
     }
     return null;
   }

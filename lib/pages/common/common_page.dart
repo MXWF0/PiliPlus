@@ -16,6 +16,7 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
   final _mainController = Get.find<MainController>();
 
   bool get needsCorrection => false;
+  bool get restoreBarsOnTickerResume => true;
 
   @override
   void initState() {
@@ -48,7 +49,10 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final enabled = TickerMode.valuesOf(context).enabled;
-    if (enabled && !_tickerEnabled) _restoreBars();
+    if (enabled && !_tickerEnabled) {
+      _scrollIntent.reset();
+      if (restoreBarsOnTickerResume) _mainController.restoreBars();
+    }
     _tickerEnabled = enabled;
   }
 
@@ -63,7 +67,7 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
   }
 
   bool onNotificationType1(ScrollNotification notification) {
-    if (!_mainController.useBottomNav) return false;
+    if (!_tickerEnabled || !_mainController.useBottomNav) return false;
     switch (_scrollIntent.update(notification)) {
       case .forward:
         _showTopBar?.value = true;
@@ -86,14 +90,27 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
   }
 
   bool onNotificationType2(ScrollNotification notification) {
-    if (!_mainController.useBottomNav) return false;
+    if (!_tickerEnabled || !_mainController.useBottomNav) return false;
 
     final metrics = notification.metrics;
     if (metrics.axis == .horizontal) return false;
 
     final intent = _scrollIntent.update(notification);
-    if (notification is ScrollEndNotification && intent == .forward) {
-      _barOffset!.value = 0;
+    if (notification is ScrollStartNotification) {
+      if (_mainController.bottomBarSettling.value) {
+        if (_mainController.bottomNavVisibility.value case final visibility?) {
+          _barOffset!.value = (1 - visibility) * Style.topBarHeight;
+        }
+      }
+      _mainController.bottomBarSettling.value = false;
+    }
+    if (notification is ScrollEndNotification) {
+      _mainController.bottomBarSettling.value = true;
+      _barOffset!.value =
+          intent == .forward ||
+              (intent == null && _barOffset!.value < Style.topBarHeight / 2)
+          ? 0
+          : Style.topBarHeight;
     }
     if (notification is ScrollUpdateNotification) {
       if (intent == null) return false;
@@ -121,7 +138,7 @@ abstract class CommonPageState<T extends StatefulWidget> extends State<T>
       return false;
     }
 
-    if (notification is OverscrollNotification && metrics.extentBefore == 0) {
+    if (notification is OverscrollNotification && intent == .forward) {
       _barOffset!.value = 0;
     }
 

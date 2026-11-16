@@ -84,10 +84,6 @@ Future<void> _initDownPath() async {
   }
 }
 
-Future<void> _initTmpPath() async {
-  tmpDirPath = (await getTemporaryDirectory()).path;
-}
-
 Future<void> _initAppPath() async {
   appSupportDirPath = (await getApplicationSupportDirectory()).path;
 }
@@ -105,34 +101,31 @@ void main() async {
   }
   ScaledWidgetsFlutterBinding.instance.scaleFactor = Pref.uiScale;
   LayeredPageTransitions.install();
-  await Future.wait([
-    _initDownPath(),
-    _initTmpPath(),
-    CacheManager.ensureInitialized(),
-    ?FontUtils.init(),
-  ]);
   Get
     ..lazyPut(AccountService.new)
     ..lazyPut(DownloadService.new);
   HttpOverrides.global = _CustomHttpOverrides();
 
-  if (PlatformUtils.isMobile) {
-    if (Platform.isAndroid) MaxScreenSize.init();
-    await Future.wait([
+  if (Platform.isAndroid) MaxScreenSize.init();
+  await Future.wait([
+    _initDownPath(),
+    CacheManager.ensureInitialized(),
+    ?FontUtils.init(),
+    if (Pref.dynamicColor) MyApp.initPlatformState(),
+    if (PlatformUtils.isMobile)
       if (Pref.horizontalScreen) ?fullMode() else ?portraitUpMode(),
+    if (PlatformUtils.isMobile || Platform.isMacOS || Platform.isLinux)
       setupServiceLocator(),
-      if (Platform.isIOS) IOSPipHelper.init(),
-    ]);
-  } else if (Platform.isWindows) {
-    if (await WebViewEnvironment.getAvailableVersion() != null) {
-      webViewEnvironment = await WebViewEnvironment.create(
-        settings: WebViewEnvironmentSettings(
-          userDataFolder: path.join(appSupportDirPath, 'flutter_inappwebview'),
-        ),
-      );
-    }
-  } else if (Platform.isMacOS || Platform.isLinux) {
-    await setupServiceLocator();
+    if (Platform.isIOS) IOSPipHelper.init(),
+  ]);
+
+  if (Platform.isWindows &&
+      await WebViewEnvironment.getAvailableVersion() != null) {
+    webViewEnvironment = await WebViewEnvironment.create(
+      settings: WebViewEnvironmentSettings(
+        userDataFolder: path.join(appSupportDirPath, 'flutter_inappwebview'),
+      ),
+    );
   }
 
   Request();
@@ -169,10 +162,6 @@ void main() async {
     } else {
       ScreenBrightnessPlatform.instance.setAutoReset(false);
     }
-  }
-
-  if (Pref.dynamicColor) {
-    await MyApp.initPlatformState();
   }
 
   if (Pref.enableLog) {

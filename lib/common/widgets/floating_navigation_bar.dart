@@ -19,6 +19,8 @@ const _kNavigationShape = RoundedSuperellipseBorder(
 
 /// ref [NavigationBar]
 class FloatingNavigationBar extends StatelessWidget {
+  static const surfaceShape = _kNavigationShape;
+
   // ignore: prefer_const_constructors_in_immutables
   FloatingNavigationBar({
     super.key,

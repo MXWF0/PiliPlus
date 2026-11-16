@@ -212,10 +212,7 @@ mixin CommonDynPageMixin<T extends StatefulWidget>
               if (index == response.length) {
                 if (controller.foldCard != null) return buildFooter();
                 controller.onLoadMore();
-                return Padding(
-                  padding: EdgeInsets.only(bottom: padding.bottom),
-                  child: ListRequestFooter(controller: controller, height: 125),
-                );
+                return ListRequestFooter(controller: controller);
               } else {
                 return buildReply(context, index, response[index]);
               }

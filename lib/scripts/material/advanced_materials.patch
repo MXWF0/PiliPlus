@@ -64,24 +64,24 @@
  import 'material_localizations.dart';
  import 'text_theme.dart';
  import 'theme.dart';
-@@ -289,7 +290,7 @@
-         alignment: alignment ?? dialogTheme.alignment ?? defaults.alignment!,
-         child: ConstrainedBox(
-           constraints: boxConstraints,
--          child: Material(
-+          child: SurfaceMaterial(kind: SurfaceMaterialKind.dialog, material: Material(
-             color: backgroundColor ?? dialogTheme.backgroundColor ?? defaults.backgroundColor,
-             elevation: elevation ?? dialogTheme.elevation ?? defaults.elevation!,
-             shadowColor: shadowColor ?? dialogTheme.shadowColor ?? defaults.shadowColor,
-@@ -299,7 +300,7 @@
-             type: MaterialType.card,
-             clipBehavior: clipBehavior ?? dialogTheme.clipBehavior ?? defaults.clipBehavior!,
-             child: child,
--          ),
-+          )),
+@@ -303,7 +304,7 @@
+           alignment: alignment ?? dialogTheme.alignment ?? defaults.alignment!,
+           child: ConstrainedBox(
+             constraints: boxConstraints,
+-            child: Material(
++            child: SurfaceMaterial(kind: SurfaceMaterialKind.dialog, material: Material(
+               color: backgroundColor ?? dialogTheme.backgroundColor ?? defaults.backgroundColor,
+               elevation: elevation ?? dialogTheme.elevation ?? defaults.elevation!,
+               shadowColor: shadowColor ?? dialogTheme.shadowColor ?? defaults.shadowColor,
+@@ -313,7 +314,7 @@
+               type: MaterialType.card,
+               clipBehavior: clipBehavior ?? dialogTheme.clipBehavior ?? defaults.clipBehavior!,
+               child: child,
+-            ),
++            )),
+           ),
          ),
        );
-     }
 --- a/lib/src/popup_menu.dart
 +++ b/lib/src/popup_menu.dart
 @@ -25,6 +25,7 @@
