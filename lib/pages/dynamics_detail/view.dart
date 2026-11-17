@@ -9,6 +9,7 @@ import 'package:PiliPlus/common/widgets/flutter/text_field/controller.dart';
 import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/floating_navigation_bar.dart';
 import 'package:PiliPlus/common/widgets/scaffold/mini_scaffold.dart';
 import 'package:PiliPlus/common/widgets/scaffold/simple_scaffold.dart';
 import 'package:PiliPlus/common/widgets/scroll_behavior.dart'
@@ -539,93 +540,93 @@ class _DynamicDetailPageState extends CommonDynPageMultiState<DynamicDetailPage>
             ),
             child: replyButton,
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.08),
+          Padding(
+            padding: EdgeInsets.fromLTRB(12, 0, 12, padding.bottom + 8),
+            child: SurfaceMaterial(
+              kind: SurfaceMaterialKind.navigationBar,
+              material: Material(
+                color: theme.colorScheme.surface,
+                shape: FloatingNavigationBar.surfaceShape,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Builder(
+                        builder: (btnContext) {
+                          final forward = moduleStat?.forward;
+                          return textIconButton(
+                            icon: FontAwesomeIcons.shareFromSquare,
+                            text: '转发',
+                            stat: forward,
+                            onPressed: (_) => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              builder: (context) => RepostPanel(
+                                item: dynItem,
+                                onSuccess: () {
+                                  if (forward != null) {
+                                    int count = forward.count ?? 0;
+                                    forward.count = count + 1;
+                                    if (btnContext.mounted) {
+                                      (btnContext as Element).markNeedsBuild();
+                                    }
+                                  }
+                                },
+                                replyInfo: (
+                                  oid: controller.oid,
+                                  replyType: controller.replyType,
+                                ),
+                                mentionItem:
+                                    dynItem.modules.moduleAuthor?.mentionItem,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: textIconButton(
+                        icon: CustomIcons.share_node,
+                        text: '分享',
+                        stat: null,
+                        onPressed: (_) => ShareUtils.shareText(
+                          '${HttpString.opusBaseUrl}/${controller.dynItem.idStr}',
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: textIconButton(
+                        icon: FontAwesomeIcons.comment,
+                        text: '评论',
+                        stat: moduleStat?.comment,
+                        onPressed: _jumpToComment,
+                      ),
+                    ),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          return textIconButton(
+                            icon: FontAwesomeIcons.thumbsUp,
+                            activatedIcon: FontAwesomeIcons.solidThumbsUp,
+                            text: '点赞',
+                            stat: moduleStat?.like,
+                            onPressed: (iconColor) =>
+                                RequestUtils.onLikeDynamic(
+                                  dynItem,
+                                  iconColor == primary,
+                                  () {
+                                    if (context.mounted) {
+                                      (context as Element).markNeedsBuild();
+                                    }
+                                  },
+                                ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            padding: EdgeInsets.only(bottom: padding.bottom),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Builder(
-                    builder: (btnContext) {
-                      final forward = moduleStat?.forward;
-                      return textIconButton(
-                        icon: FontAwesomeIcons.shareFromSquare,
-                        text: '转发',
-                        stat: forward,
-                        onPressed: (_) => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          useSafeArea: true,
-                          builder: (context) => RepostPanel(
-                            item: dynItem,
-                            onSuccess: () {
-                              if (forward != null) {
-                                int count = forward.count ?? 0;
-                                forward.count = count + 1;
-                                if (btnContext.mounted) {
-                                  (btnContext as Element).markNeedsBuild();
-                                }
-                              }
-                            },
-                            replyInfo: (
-                              oid: controller.oid,
-                              replyType: controller.replyType,
-                            ),
-                            mentionItem:
-                                dynItem.modules.moduleAuthor?.mentionItem,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: textIconButton(
-                    icon: CustomIcons.share_node,
-                    text: '分享',
-                    stat: null,
-                    onPressed: (_) => ShareUtils.shareText(
-                      '${HttpString.opusBaseUrl}/${controller.dynItem.idStr}',
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: textIconButton(
-                    icon: FontAwesomeIcons.comment,
-                    text: '评论',
-                    stat: moduleStat?.comment,
-                    onPressed: _jumpToComment,
-                  ),
-                ),
-                Expanded(
-                  child: Builder(
-                    builder: (context) {
-                      return textIconButton(
-                        icon: FontAwesomeIcons.thumbsUp,
-                        activatedIcon: FontAwesomeIcons.solidThumbsUp,
-                        text: '点赞',
-                        stat: moduleStat?.like,
-                        onPressed: (iconColor) => RequestUtils.onLikeDynamic(
-                          dynItem,
-                          iconColor == primary,
-                          () {
-                            if (context.mounted) {
-                              (context as Element).markNeedsBuild();
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
             ),
           ),
         ],
